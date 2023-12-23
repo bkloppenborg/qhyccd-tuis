@@ -9,12 +9,12 @@ INCLUDE(InstallDirs)
 
 # A prefix for version string information for this project. It is suggested that you
 # change this to something simple that won't clash with other programs/libraries
-SET(PROJECT_NAME "FooBar")
-SET(PROJECT_PREFIX "FB")
+SET(PROJECT_NAME "QHYCCDTUIS")
+SET(PROJECT_PREFIX "QCT")
 
 # Information about yourself or your company. This information is included in
-SET(VENDOR_NAME "Your Company/Personal Name here")
-SET(VENDOR_CONTACT "Company Support <support@domain.tld>")
+SET(VENDOR_NAME "Brian Kloppenborg")
+SET(VENDOR_CONTACT "Brian Kloppenborg <brian@kloppenborg.net>")
 
 # Set the project version. You probably want to change "PROJECT" to something specific
 # in order to avoid bashing CMake namespaces. Also change in the CMakeModules/Version.cmake
