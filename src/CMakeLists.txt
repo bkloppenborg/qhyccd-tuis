@@ -12,6 +12,10 @@ set(CMAKE_AUTOUIC ON)
 
 # include Qt5, if needed
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(QHYCCD REQUIRED)
+
+# Include the primary project include directory
+include_directories(${PROJECT_SOURCE_DIR}/include)
 
 file(GLOB SOURCE *.cpp)
 
