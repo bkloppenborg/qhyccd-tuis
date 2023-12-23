@@ -19,6 +19,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 file(GLOB SOURCE *.cpp)
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
-add_executable(main ${SOURCE})
-target_link_libraries(main Qt5::Widgets)
+add_executable(qhy-list-cameras list_cameras.cpp)
+target_link_libraries(qhy-list-cameras QHYCCD::QHYCCD)
+
+
