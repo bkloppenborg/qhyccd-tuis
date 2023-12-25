@@ -38,8 +38,6 @@ void check_control(qhyccd_handle * handle, CONTROL_ID control_id, const char* co
             << setw(8) << std::right << "-"
             << endl;
     }
-
-
 }
 
 int main(int argc, char *argv[])
