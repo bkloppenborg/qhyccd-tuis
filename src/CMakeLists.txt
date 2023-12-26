@@ -19,7 +19,13 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 file(GLOB SOURCE *.cpp)
 
+# List camera application
 add_executable(qhy-list-cameras list_cameras.cpp)
 target_link_libraries(qhy-list-cameras QHYCCD::QHYCCD)
 
+# Command line interface and test application
+add_library(cli-parser cli_parser.cpp)
+target_link_libraries(cli-parser Qt5::Core)
+add_executable(cli-test cli_test.cpp)
+target_link_libraries(cli-test Qt5::Core cli-parser)
 
