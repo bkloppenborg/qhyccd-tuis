@@ -1,5 +1,6 @@
 #include <QSettings>
 #include <QtDebug>
+#include <QVariant>
 
 #include "cli_parser.hpp"
 
@@ -51,31 +52,90 @@ void updateConfigFromFile(QMap<QString, QVariant> & config, const QString& fileP
     }
 }
 
+void updateDefaultsFromSubConfig(QMap<QString, QVariant> & config, const QString & subConfig) {
+
+    if(!subConfig.isEmpty()) {
+    QStringList topLevelKeys = getTopLevelKeys(config);
+    for(const QString & key: topLevelKeys) {
+        const QString subKey = subConfig + "/" + key;
+        if(config.contains(subKey)) {
+            config[key] = config[subKey];
+        }
+    }
+    }
+}
+
 void printConfig(const QMap<QString, QVariant> & config) {
 
-    // Display final values
-    qDebug() << "Configuration file: " << config.value("config-file");
-    qDebug() << "Configuration name: " << config.value("config-name");
-    qDebug() << "Camera ID: " << config.value("camera-id");
-    qDebug() << "Number of exposures: " << config.value("num-exposures");
-    qDebug() << "Exposure durations: " << config.value("durations-sec") << " seconds";
-    qDebug() << "Filters: " << config.value("filters") << " seconds";
-    qDebug() << "Camera gain: " << config.value("gain") ;
-    qDebug() << "Catalog: " << config.value("catalog");
-    qDebug() << "Object ID: " << config.value("object-id");
+    for(const QString & key: config.keys()) {
+        qDebug() << key << " " << config[key];
+    }
+}
+
+void checkIntegerType(const QStringList & list, const QString & errorMessage) {
+
+    bool ok = true;
+
+    for(const QString & str: list) {
+        str.toInt(&ok);
+        if(!ok) {
+            qCritical() << "Error:" << errorMessage;
+            exit(-1);
+        }
+    }
+}
+
+void checkNumericType(const QStringList & list, const QString & errorMessage) {
+
+    bool ok = true;
+
+    for(const QString & str: list) {
+        str.toDouble(&ok);
+        if(!ok) {
+            qCritical() << "Error:" << errorMessage;
+            exit(-1);
+        }
+    }
+}
+
+QStringList toStringList(const QVariant & var) {
+
+    if(var.type() == QVariant::Type::String) {
+        return var.toString().split(",");
+    }
+
+    return var.toStringList();
+}
+
+void checkMatchingLength(const QStringList & A, const QStringList & B, const QString & errorMessage) {
+    if(A.length() != B.length()) {
+        qCritical() << errorMessage;
+        exit(-1);
+    }
 }
 
 QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
 
     // Configure the QMap with parameters that are relevant to the application
     QMap<QString, QVariant> config;
-    config["config-file"] =  "";  // Default is an empty string
-    config["config-name"] =  "None";
-    config["camera-id"] = "None";
-    config["num-exposures"] =  "5";
-    config["durations-sec"] =  "10.0";
-    config["filters"] =  "None";
-    config["gain"] =  1.0;
+    config["config-file"] =  "";
+    config["camera-config"] = "";
+    config["exp-config"] = "";
+
+    // Configuration options typically specified in a camera block
+    config["camera-id"] =  "None";
+    config["filter-names"] =  "None";   // an ordered list of filter names corresponding to slot numbers
+    config["usb-transferbit"] =  "16";
+    config["usb-traffic"] =  "10";
+
+    // Configuration options typically specified in a exposure configuration block
+    config["exp-quantities"] = "5";
+    config["exp-durations"] = "10";
+    config["exp-filters"] = "None";
+    config["exp-gains"] = "1.0";    // typically doesn't change between exposures, automatically replicated if needed.
+    config["exp-offsets"] =  "100";  // typically doesn't change between exposures, automatically replicated if needed.
+
+    // Configuration typically specified on the CLI
     config["catalog"] =  "None";
     config["object-id"] =  "None";
 
@@ -85,15 +145,22 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     parser.addHelpOption();
 
     // QMap parameters
-    parser.addOption({{"config-file", "f"}, "Path to configuration file", "config-file"});
-    parser.addOption({{"config-name", "a"}, "Name of camera configuration block in INI file [default: General]", "config-name"});
-    parser.addOption({{"camera-id", "c"}, "Camera ID", "camera-id"});  
-    parser.addOption({{"num-exposures", "n"}, "Number of exposures (comma separated)", "num-exposures"});
-    parser.addOption({{"durations-sec", "d"}, "Duration of exposures in seconds (comma separated)", "durations-sec"});
-    parser.addOption({{"filters", "b"}, "Filters (comma separated)", "filters"});
-    parser.addOption({{"gain", "g"}, "Camera gain", "gain",});
+    parser.addOption({{"config-file", "f"},     "Path to configuration file", "config-file"});
+    parser.addOption({{"camera-config", "cc"},  "Camera configuration name [optional]", "camera-config"});
+    parser.addOption({{"exp-config", "ec"},     "Exposure configuration name [optional]", "exp-config"});
+
+    parser.addOption({{"exp-quantities", "eq"}, "Number of exposures per filter", "exp-quantities"});
+    parser.addOption({{"exp-durations", "ed"},  "Exposure duration, in seconds, per filter", "exp-durations"});
+    parser.addOption({{"exp-filters", "ef"},    "Names of filter to use", "exp-filters"});
+    parser.addOption({{"exp-gains", "eg"},      "The gain to use per each filter", "exp-gains"});
+    parser.addOption({{"exp-offsets", "eo"},    "Image offset per each filter", "exp-offsets"});
+
     parser.addOption({"catalog", "Catalog name", "catalog"});
     parser.addOption({"object-id", "Object identifier", "object"});
+    parser.addOption({"camera-id", "QHY Camera Identifier", "camera-id"});
+    parser.addOption({"filter-names", "List of filters in the camera", ""});
+    parser.addOption({"usb-traffic", "QHY USB Traffic Setting", "usb-traffic"});
+    parser.addOption({"usb-transferbit", "Bits for image transfer. Options are 8 or 16", "usb-transferbit"});
     
     // Other parameters
     parser.addOption(QCommandLineOption("dump-config", "Dump default configuration to file", "file"));
@@ -113,56 +180,74 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     if (!configFile.isEmpty()) {
         qDebug() << "Loading settings from configuration file " << configFile;
         updateConfigFromFile(config, configFile);
+        config["config-file"] = QVariant(configFile);
     }
 
-    // If a specific `config-name` was specified, replace the values in
-    // config with those in the sub-configuration.
-    const QString configName = parser.value("config-name");
-    if(!configName.isEmpty()) {
-        QStringList topLevelKeys = getTopLevelKeys(config);
-        for(const QString & key: topLevelKeys) {
-            const QString subKey = configName + "/" + key;
-            if(config.contains(subKey)) {
-                config[key] = config[subKey];
-            }
-        }
+    // If a specific `camera-config` was specified, replace the values in the
+    // default configuration with the values in the sub-configuration
+    QString cameraConfig = parser.value("camera-config");
+    if(!cameraConfig.isEmpty()) {
+        qDebug() << "Loading camera configuration named " << cameraConfig;
+        updateDefaultsFromSubConfig(config, cameraConfig);
+    }
+
+    // If a specific `camera-config` was specified, replace the values in the
+    // default configuration with the values in the sub-configuration
+    QString expConfig = parser.value("exp-config");
+    if(!expConfig.isEmpty()) {
+        qDebug() << "Loading exposure configuration named " << expConfig;
+        updateDefaultsFromSubConfig(config, expConfig);
     }
 
     // Override config values with anything specified on the command line.
     qDebug() << "Updating settings from command line parameters.";
     updateConfigFromCommandLine(config, parser);
 
-    // Convert the exposure, durations, and filters into QStringLists
-    const QStringList exposures = config["num-exposures"].toString().split(",");
-    const QStringList durations = config["durations-sec"].toString().split(",");
-    const QStringList filters = config["filters"].toString().split(",");
-    config["num-exposures"] = exposures;
-    config["durations-sec"] = durations;
+    // Convert the number of exposures to a QStringList. Verify that they are integers.
+    const QStringList quantities = toStringList(config["exp-quantities"]);
+    checkIntegerType(quantities, "exp-quantities must be a comma separated list of integer values without any spaces.");
+    config["exp-quantities"] = quantities;
+
+    // Convert the duration information to a QStringList. Enforce length matching to exposures.
+    const QStringList durations = toStringList(config["exp-durations"]);
+    checkNumericType(durations, "exp-durations must be a comma separated list of numeric values without any spaces");
+    checkMatchingLength(quantities, durations, "The number of durations does match the number of exposures");
+    config["exp-durations"] = durations;
+
+    // Convert the filter information to a QStringList. Enforce length matching to exposures.
+    const QStringList filters = toStringList(config["exp-filters"]);
+    checkMatchingLength(quantities, filters, "The number of filters does match the number of exposures");
     config["filters"] = filters;
 
-    // Verify that exposure, durations, and filters are all the same length.
-    if(exposures.length() != durations.length() || 
-       exposures.length() != filters.length()) {
-        qCritical() << "The number of exposures, exposure durations, or filters do not match.";
+    // Convert the gain information to a QStringList. Require that at least one gain was specified.
+    // Replicate the gain to all filters if necessary.
+    QStringList gains = toStringList(config["exp-gains"]);
+    checkNumericType(gains, "exp-gains must be a comma separated list of numeric values without any spaces");
+    if(gains.length() == 0) {
+        qCritical() << "The number of gains specified cannot be zero";
+    }
+    for(int i = gains.length(); i < quantities.length(); i++) {
+        gains.append(gains.at(0));
+    }
+    config["exp-gains"] = gains;
+
+    // Convert the offset information to a QStringList. Require that at least one gain was specified.
+    // Replicate the offset to all filters if necessary.
+    QStringList offsets = toStringList(config["exp-offsets"]);
+    checkIntegerType(offsets, "exp-offsets must be a comma separated list of integer values without any spaces.");
+    if(gains.length() == 0) {
+        qCritical() << "The number of offsets specified cannot be zero";
         exit(-1);
     }
-
-    // Verify that exposures are integers.
-    bool ok = true;
-    for(const QString & str: exposures) {
-        str.toInt(&ok);
-        if(!ok) {
-            qCritical() << "num-exposures must be a comma separated list of integer values without any spaces.";
-            exit(-1);
-        }
+    for(int i = offsets.length(); i < quantities.length() ; i++) {
+        offsets.append(offsets.at(0));
     }
+    config["exp-offsets"] = offsets;
 
-    // Verify that exposure durations are numeric.
-    for(const QString & str: durations) {
-        str.toDouble(&ok);
-        if(!ok) {
-            qCritical() << "durations-sec must be a comma separated list of numeric values without any spaces.";
-            exit(-1);
+    // Clean up the configuration by removing child configurations
+    for(const QString & key: config.keys()) {
+        if(key.contains("/")) {
+            config.remove(key);
         }
     }
 
