@@ -13,6 +13,7 @@ set(CMAKE_AUTOUIC ON)
 # include Qt5, if needed
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 find_package(QHYCCD REQUIRED)
+find_package(OpenCV REQUIRED)
 
 # Include the primary project include directory
 include_directories(${PROJECT_SOURCE_DIR}/include)
@@ -29,3 +30,6 @@ target_link_libraries(cli-parser Qt5::Core)
 add_executable(cli-test cli_test.cpp)
 target_link_libraries(cli-test Qt5::Core cli-parser)
 
+# Camera control application
+add_executable(qhy-camera-control camera_control.cpp)
+target_link_libraries(qhy-camera-control QHYCCD::QHYCCD Qt5::Core cli-parser ${OpenCV_LIBS})
