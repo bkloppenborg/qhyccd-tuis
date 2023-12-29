@@ -59,10 +59,13 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    bool filter_wheel_exists = IsQHYCCDCFWPlugged(handle);
+    bool filter_wheel_exists = (IsQHYCCDCFWPlugged(handle) == QHYCCD_SUCCESS);
     qDebug() << "Camera has filter wheel:" << filter_wheel_exists;
     int filter_wheel_max_slots = GetQHYCCDParam(handle, CONTROL_CFWSLOTSNUM);
     qDebug() << "Number of slots:" << filter_wheel_max_slots;
+
+    char fw_cmd_position[8] = {0};
+    char fw_act_position[8] = {0};
 
     // Set up the camera and take images.
     for(int idx = 0; idx < filters.length(); idx++) {
@@ -73,7 +76,6 @@ int main(int argc, char *argv[]) {
         int offset = offsets[idx].toInt();
         QString filter_name = filters[idx];
         int filter_idx = filter_names.indexOf(filter_name);
-        qDebug() << "Filter IDX:" << filter_idx;
         if(filter_idx == -1) {
             qWarning() << "Filter" << filter_name << "is not installed, skipping";
             continue;
@@ -81,16 +83,19 @@ int main(int argc, char *argv[]) {
         
         // Change the filter
         if(filter_wheel_exists && filter_wheel_max_slots > 0) {
-            char position[8] = {0};
-            snprintf(position, 8, "%X", filter_idx);
-            status = SendOrder2QHYCCDCFW(handle, position, 1);
-            std::this_thread::sleep_for(1s);
+            qDebug() << "Commanding filter wheel to change to" << filter_name << "slot" << filter_idx;
 
-            // Verify the filter changed
-            status = GetQHYCCDCFWStatus(handle, position);
-            qDebug() << filter_idx << position;
+            snprintf(fw_cmd_position, 8, "%X", filter_idx);
+            status = SendOrder2QHYCCDCFW(handle, fw_cmd_position, 1);
+
+            do {
+                std::this_thread::sleep_for(500ms);
+                status = GetQHYCCDCFWStatus(handle, fw_act_position);
+
+            } while (strcmp(fw_cmd_position, fw_act_position) != 0);
+
+            qDebug() << "Filter change to" << filter_name << "successful";
         }
-
 
         // Configure the camera
         status  = SetQHYCCDStreamMode(handle, 0);
@@ -109,7 +114,8 @@ int main(int argc, char *argv[]) {
 
         // take images
         for(int exposure_idx = 0; exposure_idx < quantity; exposure_idx++) {
-            qDebug() << "Starting exposure" << exposure_idx << "for" << duration_usec / 1E6 << "seconds";
+            qDebug() << "Starting exposure" << exposure_idx + 1 << "/" << quantity
+                     << "with a duration of" << duration_usec / 1E6 << "seconds";
 
             int64_t time_remaining_ms = duration_usec / 1E3;
 
