@@ -29,13 +29,13 @@ int main(int argc, char *argv[]) {
     // Configure the application
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Kloppenborg.net");
-    QApplication::setOrganizationDomain("kloppenbor.net");
+    QApplication::setOrganizationDomain("kloppenborg.net");
     QApplication::setApplicationName("qhyccd-tuis");
 
     // Create the worker.
     WorkerThread * worker = new WorkerThread();
 
-    // Create a window
+    // Create a window, initialize it with an all black background.
     cv::namedWindow("display_window", cv::WINDOW_NORMAL);
     cv::resizeWindow("display_window", 3856*0.3, 2180*0.3);
     cv::Mat temp(2180, 3856, CV_16U);
