@@ -1,3 +1,6 @@
+#ifndef CLI_PARSER_H
+#define CLI_PARSER_H
+
 #include <QCoreApplication>
 #include <QStringList>
 #include <QVariant>
@@ -24,3 +27,5 @@ void checkNumericType(const QStringList & list, const QString & errorMessage);
 QStringList toStringList(const QVariant & var);
 
 void checkMatchingLength(const QStringList & A, const QStringList & B, const QString & errorMessage);
+
+#endif // CLI_PARSER_H
