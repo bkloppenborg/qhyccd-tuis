@@ -100,7 +100,7 @@ void checkNumericType(const QStringList & list, const QString & errorMessage) {
 
 QStringList toStringList(const QVariant & var) {
 
-    if(var.type() == QVariant::Type::String) {
+    if(var.typeId() == QMetaType::QString) {
         return var.toString().split(",");
     }
 
