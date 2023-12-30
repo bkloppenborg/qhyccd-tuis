@@ -203,6 +203,17 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     qDebug() << "Updating settings from command line parameters.";
     updateConfigFromCommandLine(config, parser);
 
+    //
+    // Verify that the configuration makes sense
+    //
+    printConfig(config);
+
+    // Check that the camera is specified
+    if(config["camera-id"] == "None") {
+        qCritical() << "Critical: Camera ID not specified. Exiting.";
+        exit(-1);
+    }
+
     // Convert the number of exposures to a QStringList. Verify that they are integers.
     const QStringList quantities = toStringList(config["exp-quantities"]);
     checkIntegerType(quantities, "exp-quantities must be a comma separated list of integer values without any spaces.");
