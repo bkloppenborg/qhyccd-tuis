@@ -15,8 +15,9 @@ void print_control_header() {
         << endl;
 }
 
-void check_control(qhyccd_handle * handle, CONTROL_ID control_id, const char* control_name) {
+bool check_control(qhyccd_handle * handle, CONTROL_ID control_id, const char* control_name) {
     using namespace std;
+    bool control_available = false;
 
     if(IsQHYCCDControlAvailable(handle, control_id) == QHYCCD_SUCCESS) {
         double minimum = 0, maximum = 0, step = 0;
@@ -29,6 +30,8 @@ void check_control(qhyccd_handle * handle, CONTROL_ID control_id, const char* co
             << setw(8) << std::right << maximum
             << setw(8) << std::right << step
             << endl;
+        control_available = true;
+
     } else {
         cout << "  "
             << setw(36) << std::left << control_name
@@ -38,6 +41,8 @@ void check_control(qhyccd_handle * handle, CONTROL_ID control_id, const char* co
             << setw(8) << std::right << "-"
             << endl;
     }
+
+    return control_available;
 }
 
 int main(int argc, char *argv[])
@@ -132,7 +137,7 @@ int main(int argc, char *argv[])
         check_control(handle, CONTROL_CFWPORT, "CONTROL_CFWPORT");
         check_control(handle, CONTROL_COOLER, "CONTROL_COOLER");
         check_control(handle, CONTROL_ST4PORT, "CONTROL_ST4PORT");
-        check_control(handle, CAM_COLOR, "CAM_COLOR");
+        //check_control(handle, CAM_COLOR, "CAM_COLOR"); // covered with CAM_IS_COLOR below
         check_control(handle, CAM_BIN1X1MODE, "CAM_BIN1X1MODE");
         check_control(handle, CAM_BIN2X2MODE, "CAM_BIN2X2MODE");
         check_control(handle, CAM_BIN3X3MODE, "CAM_BIN3X3MODE");
@@ -182,7 +187,27 @@ int main(int argc, char *argv[])
 
         check_control(handle, CAM_SINGLEFRAMEMODE, "CAM_SINGLEFRAMEMODE");
         check_control(handle, CAM_LIVEVIDEOMODE, "CAM_LIVEVIDEOMODE");
-        check_control(handle, CAM_IS_COLOR, "CAM_IS_COLOR");
+        bool is_color = check_control(handle, CAM_IS_COLOR, "CAM_IS_COLOR");
+        if(is_color) {
+            int bayer_order = IsQHYCCDControlAvailable(handle, CAM_COLOR);
+            switch(bayer_order) {
+                case BAYER_GB:
+                    cout << "   GBRG order" << endl;
+                break;
+                case BAYER_GR:
+                    cout << "   GRBG order" << endl;
+                break;
+                case BAYER_BG:
+                    cout << "   BGGR, order" << endl;
+                break;
+                case BAYER_RG:
+                    cout << "   RGGB order" << endl;
+                break;
+                default:
+                    cout << "   Bayer order unknown" << endl;
+            }
+        }
+
         check_control(handle, hasHardwareFrameCounter, "HASHARDWAREFRAMECOUNTER");
         check_control(handle, CONTROL_MAX_ID_Error, "CONTROL_MAX_ID_ERROR");
         check_control(handle, CAM_HUMIDITY, "CAM_HUMIDITY");
