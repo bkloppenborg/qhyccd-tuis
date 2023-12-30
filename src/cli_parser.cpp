@@ -131,7 +131,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     // Configuration options typically specified in a exposure configuration block
     config["exp-quantities"] = "5";
     config["exp-durations"] = "10";
-    config["exp-filters"] = "None";
+    config["exp-filters"] = "";
     config["exp-gains"] = "1.0";    // typically doesn't change between exposures, automatically replicated if needed.
     config["exp-offsets"] =  "100";  // typically doesn't change between exposures, automatically replicated if needed.
 
@@ -215,9 +215,14 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["exp-durations"] = durations;
 
     // Convert the filter information to a QStringList. Enforce length matching to exposures.
-    const QStringList filters = toStringList(config["exp-filters"]);
-    checkMatchingLength(quantities, filters, "The number of filters does match the number of exposures");
-    config["filters"] = filters;
+    QStringList exp_filters = toStringList(config["exp-filters"]);
+    const QStringList filter_names = toStringList(config["filter-names"]);
+    // If the user didn't specify a filter, select the default filter for them automatically
+    if(exp_filters.length() == 1 && exp_filters[0] == "" && filter_names.length() > 0) {
+        exp_filters[0] = filter_names[0];
+    }
+    checkMatchingLength(quantities, exp_filters, "The number of filters does match the number of exposures");
+    config["exp-filters"] = exp_filters;
 
     // Convert the gain information to a QStringList. Require that at least one gain was specified.
     // Replicate the gain to all filters if necessary.
