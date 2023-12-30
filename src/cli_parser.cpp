@@ -206,7 +206,6 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     //
     // Verify that the configuration makes sense
     //
-    printConfig(config);
 
     // Check that the camera is specified
     if(config["camera-id"] == "None") {
