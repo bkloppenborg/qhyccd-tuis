@@ -1,4 +1,4 @@
-#include <QCoreApplication>
+#include <QApplication>
 #include <QDebug>
 #include <qhyccd.h>
 #include <string>
@@ -30,10 +30,10 @@ int main(int argc, char *argv[]) {
     sigaction(SIGINT, &sigIntHandler, NULL);
 
     // Configure the application
-    QCoreApplication app(argc, argv);
-    QCoreApplication::setOrganizationName("Kloppenborg.net");
-    QCoreApplication::setOrganizationDomain("kloppenbor.net");
-    QCoreApplication::setApplicationName("qhyccd-tuis");
+    QApplication app(argc, argv);
+    QApplication::setOrganizationName("Kloppenborg.net");
+    QApplication::setOrganizationDomain("kloppenbor.net");
+    QApplication::setApplicationName("qhyccd-tuis");
 
     unsigned int roiStartX = 0;
     unsigned int roiStartY = 0;
@@ -58,7 +58,6 @@ int main(int argc, char *argv[]) {
     
     QString catalog_name    = config["catalog"].toString();
     QString object_name     = config["object-id"].toString();
-
 
     // Initalize the camera
     int status = QHYCCD_SUCCESS;
@@ -85,8 +84,11 @@ int main(int argc, char *argv[]) {
     char fw_act_position[8] = {0};
     bool filter_wheel_exists = (IsQHYCCDCFWPlugged(handle) == QHYCCD_SUCCESS);
     int filter_wheel_max_slots = GetQHYCCDParam(handle, CONTROL_CFWSLOTSNUM);
-    qDebug() << "Camera has filter wheel:" << filter_wheel_exists;
-    qDebug() << "Number of slots:" << filter_wheel_max_slots;
+    qDebug() << "Filter wheel exists?:" << filter_wheel_exists;
+    qDebug() << "Filter wheel slots:" << filter_wheel_max_slots;
+
+    // Create a window
+    cv::namedWindow("display_window", cv::WINDOW_NORMAL);
 
     // Set up the camera and take images.
     for(int idx = 0; keep_running && idx < filters.length(); idx++) {
@@ -168,6 +170,10 @@ int main(int argc, char *argv[]) {
             const auto t_b = std::chrono::system_clock::now();
             status = GetQHYCCDSingleFrame(handle, &roiSizeX, &roiSizeY, &bpp, &channels, image_data.ptr());
             const auto t_c = std::chrono::system_clock::now();
+
+            // display the image
+            cv::imshow("display_window", image_data);
+            cv::waitKey(1);
         }
 
     }

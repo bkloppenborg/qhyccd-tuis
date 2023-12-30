@@ -30,4 +30,4 @@ target_link_libraries(cli-test Qt5::Core cli-parser)
 
 # Camera control application
 add_executable(qhy-camera-control camera_control.cpp)
-target_link_libraries(qhy-camera-control QHYCCD::QHYCCD Qt5::Core cli-parser ${OpenCV_LIBS})
+target_link_libraries(qhy-camera-control QHYCCD::QHYCCD Qt5::Core Qt5::Widgets cli-parser ${OpenCV_LIBS})
