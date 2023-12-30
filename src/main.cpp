@@ -37,6 +37,9 @@ int main(int argc, char *argv[]) {
 
     // Create a window
     cv::namedWindow("display_window", cv::WINDOW_NORMAL);
+    cv::resizeWindow("display_window", 3856*0.3, 2180*0.3);
+    cv::Mat temp(2180, 3856, CV_16U);
+    cv::imshow("display_window", temp);
 
     // parse the command line arguments.
     QMap<QString, QVariant> config = parse_cli(app);
