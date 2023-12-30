@@ -129,8 +129,8 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["usb-traffic"] =  "10";
 
     // Configuration options typically specified in a exposure configuration block
-    config["exp-quantities"] = "5";
-    config["exp-durations"] = "10";
+    config["exp-quantities"] = "10";
+    config["exp-durations"] = "1.0";
     config["exp-filters"] = "";
     config["exp-gains"] = "1.0";    // typically doesn't change between exposures, automatically replicated if needed.
     config["exp-offsets"] =  "100";  // typically doesn't change between exposures, automatically replicated if needed.

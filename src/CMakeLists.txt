@@ -18,8 +18,6 @@ find_package(OpenCV REQUIRED)
 # Include the primary project include directory
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-file(GLOB SOURCE *.cpp)
-
 # List camera application
 add_executable(qhy-list-cameras list_cameras.cpp)
 target_link_libraries(qhy-list-cameras QHYCCD::QHYCCD)

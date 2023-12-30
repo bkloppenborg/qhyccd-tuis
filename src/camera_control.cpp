@@ -20,12 +20,10 @@ int main(int argc, char *argv[]) {
 
     unsigned int roiStartX = 0;
     unsigned int roiStartY = 0;
-    unsigned int roiSizeX = 1024;
-    unsigned int roiSizeY = 1024;
+    unsigned int roiSizeX = 1;
+    unsigned int roiSizeY = 1;
     unsigned int bpp;
     unsigned int channels;
-
-    cv::Mat image_data(roiSizeX, roiSizeY, CV_16U);
 
     QMap<QString, QVariant> config = parse_cli(app);
     printConfig(config);
@@ -59,13 +57,20 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    bool filter_wheel_exists = (IsQHYCCDCFWPlugged(handle) == QHYCCD_SUCCESS);
-    qDebug() << "Camera has filter wheel:" << filter_wheel_exists;
-    int filter_wheel_max_slots = GetQHYCCDParam(handle, CONTROL_CFWSLOTSNUM);
-    qDebug() << "Number of slots:" << filter_wheel_max_slots;
+    // Get the maximum image size in 1x1 binning mode and set that as the default
+    double chip_w, chip_h, pixel_w, pixel_h;
+    uint32_t image_w, image_h, bit_depth;
+    GetQHYCCDChipInfo(handle, &chip_w, &chip_h, &image_w, &image_h, &pixel_w, &pixel_h, &bit_depth);
+    roiSizeX = image_w;
+    roiSizeY = image_h;
 
+    // Setup the filter wheel
     char fw_cmd_position[8] = {0};
     char fw_act_position[8] = {0};
+    bool filter_wheel_exists = (IsQHYCCDCFWPlugged(handle) == QHYCCD_SUCCESS);
+    int filter_wheel_max_slots = GetQHYCCDParam(handle, CONTROL_CFWSLOTSNUM);
+    qDebug() << "Camera has filter wheel:" << filter_wheel_exists;
+    qDebug() << "Number of slots:" << filter_wheel_max_slots;
 
     // Set up the camera and take images.
     for(int idx = 0; idx < filters.length(); idx++) {
@@ -111,6 +116,9 @@ int main(int argc, char *argv[]) {
             qCritical() << "Camera configuration failed";
             exit(-1);
         }
+
+        // Allocate a buffer to store the images (temporary)
+        cv::Mat image_data(roiSizeY, roiSizeX, CV_16U);
 
         // take images
         for(int exposure_idx = 0; exposure_idx < quantity; exposure_idx++) {
