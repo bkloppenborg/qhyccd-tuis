@@ -7,10 +7,19 @@
 
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/mat.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "cli_parser.hpp"
 
 bool keep_running = true;
+
+enum BayerOrder {
+    BAYER_ORDER_GBRG,
+    BAYER_ORDER_GRBG,
+    BAYER_ORDER_BGGR,
+    BAYER_ORDER_RGGB,
+    BAYER_ORDER_NONE,
+};
 
 int takeExposures(const QMap<QString, QVariant> & config) {
 
@@ -22,6 +31,8 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     unsigned int roiSizeY = 1;
     unsigned int bpp;
     unsigned int channels;
+    BayerOrder bayer_order = BAYER_ORDER_NONE;
+
 
     // Unpack the configuration settings.
     string camera_id        = config["camera-id"].toString().toStdString();
@@ -49,6 +60,33 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     if(status != QHYCCD_SUCCESS) {
         qCritical() << "Camera does not support single frame exposures";
         exit(-1);
+    }
+
+    // If this is a color camera, get the Bayer ordering.
+    if(IsQHYCCDControlAvailable(handle, CAM_IS_COLOR) == QHYCCD_SUCCESS) {
+        qDebug() << "Device is a color camera";
+        int qhy_bayer_order = IsQHYCCDControlAvailable(handle, CAM_COLOR);
+        switch(qhy_bayer_order) {
+            case BAYER_GB:
+                bayer_order = BAYER_ORDER_GBRG;
+                qDebug() << "Bayer Order: BAYER_ORDER_GBRG";
+            break;
+            case BAYER_GR:
+                bayer_order = BAYER_ORDER_GRBG;
+                qDebug() << "Bayer Order: BAYER_ORDER_GRBG";
+            break;
+            case BAYER_BG:
+                bayer_order = BAYER_ORDER_BGGR;
+                qDebug() << "Bayer Order: BAYER_ORDER_BGGR";
+            break;
+            case BAYER_RG:
+                bayer_order = BAYER_ORDER_RGGB;
+                qDebug() << "Bayer Order: BAYER_ORDER_RGGB";
+            break;
+            default:
+                bayer_order = BAYER_ORDER_NONE;
+                qDebug() << "Bayer Order: BAYER_ORDER_NONE";
+        }
     }
 
     // Get the maximum image size in 1x1 binning mode and set that as the default
@@ -111,8 +149,10 @@ int takeExposures(const QMap<QString, QVariant> & config) {
             exit(-1);
         }
 
-        // Allocate a buffer to store the images (temporary)
-        cv::Mat image_data(roiSizeY, roiSizeX, CV_16U);
+        // Allocate a buffers to store the images (temporary)
+        cv::Mat raw_image(roiSizeY, roiSizeX, CV_16U);
+        cv::Mat color_image(raw_image.rows / 2, raw_image.cols / 2, CV_16UC3);
+        cv::Mat display_image;
 
         // take images
         for(int exposure_idx = 0; keep_running && exposure_idx < quantity; exposure_idx++) {
@@ -144,11 +184,29 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
             // Transfer the image. This is a blocking call.
             const auto t_b = std::chrono::system_clock::now();
-            status = GetQHYCCDSingleFrame(handle, &roiSizeX, &roiSizeY, &bpp, &channels, image_data.ptr());
+            status = GetQHYCCDSingleFrame(handle, &roiSizeX, &roiSizeY, &bpp, &channels, raw_image.ptr());
             const auto t_c = std::chrono::system_clock::now();
 
-            // display the image
-            cv::imshow("display_window", image_data);
+            // De-bayer the image if needed
+            if(bayer_order == BAYER_ORDER_GBRG) {
+                cv::cvtColor(raw_image, color_image, cv::COLOR_BayerGBRG2BGR);
+                display_image = color_image;
+            } else if (bayer_order == BAYER_ORDER_GRBG) {
+                cv::cvtColor(raw_image, color_image, cv::COLOR_BayerGRBG2BGR);
+                display_image = color_image;
+            } else if (bayer_order == BAYER_ORDER_BGGR) {
+                cv::cvtColor(raw_image, color_image, cv::COLOR_BayerBGGR2BGR);
+                display_image = color_image;
+            } else if (bayer_order == BAYER_ORDER_RGGB) {
+                cv::cvtColor(raw_image, color_image, cv::COLOR_BayerRGGB2BGR);
+                display_image = color_image;
+            } else {
+                // not a bayer image, just swap buffers
+                display_image = raw_image;
+            }
+
+            // Show the image.
+            cv::imshow("display_window", display_image);
             cv::waitKey(1);
         }
 
