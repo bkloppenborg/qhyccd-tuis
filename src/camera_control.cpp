@@ -12,28 +12,9 @@
 
 bool keep_running = true;
 
-void sig_handler(int signal){
-    keep_running = false;
+int takeExposures(const QMap<QString, QVariant> & config) {
 
-    if(signal == SIGINT)
-        qDebug() << "Received SIGINT, exiting";
-}
-
-int main(int argc, char *argv[]) {
     using namespace std;
-
-    // Register interrupt handlers
-    struct sigaction sigIntHandler;
-    sigIntHandler.sa_handler = sig_handler;
-    sigemptyset(&sigIntHandler.sa_mask);
-    sigIntHandler.sa_flags = 0;
-    sigaction(SIGINT, &sigIntHandler, NULL);
-
-    // Configure the application
-    QApplication app(argc, argv);
-    QApplication::setOrganizationName("Kloppenborg.net");
-    QApplication::setOrganizationDomain("kloppenbor.net");
-    QApplication::setApplicationName("qhyccd-tuis");
 
     unsigned int roiStartX = 0;
     unsigned int roiStartY = 0;
@@ -41,8 +22,6 @@ int main(int argc, char *argv[]) {
     unsigned int roiSizeY = 1;
     unsigned int bpp;
     unsigned int channels;
-
-    QMap<QString, QVariant> config = parse_cli(app);
 
     // Unpack the configuration settings.
     string camera_id        = config["camera-id"].toString().toStdString();
@@ -86,9 +65,6 @@ int main(int argc, char *argv[]) {
     int filter_wheel_max_slots = GetQHYCCDParam(handle, CONTROL_CFWSLOTSNUM);
     qDebug() << "Filter wheel exists?:" << filter_wheel_exists;
     qDebug() << "Filter wheel slots:" << filter_wheel_max_slots;
-
-    // Create a window
-    cv::namedWindow("display_window", cv::WINDOW_NORMAL);
 
     // Set up the camera and take images.
     for(int idx = 0; keep_running && idx < filters.length(); idx++) {
