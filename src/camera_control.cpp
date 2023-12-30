@@ -3,14 +3,31 @@
 #include <qhyccd.h>
 #include <string>
 #include <thread>
+#include <signal.h>
 
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/mat.hpp>
 
 #include "cli_parser.hpp"
 
+bool keep_running = true;
+
+void sig_handler(int signal){
+    keep_running = false;
+
+    if(signal == SIGINT)
+        qDebug() << "Received SIGINT, exiting";
+}
+
 int main(int argc, char *argv[]) {
     using namespace std;
+
+    // Register interrupt handlers
+    struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = sig_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, NULL);
 
     // Configure the application
     QCoreApplication app(argc, argv);
@@ -26,7 +43,6 @@ int main(int argc, char *argv[]) {
     unsigned int channels;
 
     QMap<QString, QVariant> config = parse_cli(app);
-    printConfig(config);
 
     // Unpack the configuration settings.
     string camera_id        = config["camera-id"].toString().toStdString();
@@ -73,7 +89,7 @@ int main(int argc, char *argv[]) {
     qDebug() << "Number of slots:" << filter_wheel_max_slots;
 
     // Set up the camera and take images.
-    for(int idx = 0; idx < filters.length(); idx++) {
+    for(int idx = 0; keep_running && idx < filters.length(); idx++) {
 
         int quantity = quantities[idx].toInt();
         double duration_usec = durations[idx].toDouble() * 1E6;
@@ -121,7 +137,7 @@ int main(int argc, char *argv[]) {
         cv::Mat image_data(roiSizeY, roiSizeX, CV_16U);
 
         // take images
-        for(int exposure_idx = 0; exposure_idx < quantity; exposure_idx++) {
+        for(int exposure_idx = 0; keep_running && exposure_idx < quantity; exposure_idx++) {
             qDebug() << "Starting exposure" << exposure_idx + 1 << "/" << quantity
                      << "with a duration of" << duration_usec / 1E6 << "seconds";
 
@@ -135,11 +151,18 @@ int main(int argc, char *argv[]) {
                 exit(-1);
             }
 
-            // Periodically wake up during the exposure to check for user commmands.
+            // Wake up every 10 milliseconds to check on exposure progress.
             do {
                 std::this_thread::sleep_for(10ms);
-                time_remaining_ms -= 100;
-            } while (time_remaining_ms > 100);
+                time_remaining_ms -= 10;
+            } while (keep_running && time_remaining_ms > 100);
+
+            // If we are instructed to exit, abort the exposure and readout.
+            if(!keep_running) {
+                qDebug() << "Aborting exposure and readout";
+                status = CancelQHYCCDExposingAndReadout(handle);
+                break;
+            }
 
             // Transfer the image. This is a blocking call.
             const auto t_b = std::chrono::system_clock::now();
