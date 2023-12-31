@@ -209,7 +209,6 @@ int takeExposures(const QMap<QString, QVariant> & config) {
             cv::imshow("display_window", display_image);
             cv::waitKey(1);
         }
-
     }
 
     // shutdown cleanly
