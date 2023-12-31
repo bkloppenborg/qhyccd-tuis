@@ -1,5 +1,7 @@
 #include <QApplication>
 #include <QDebug>
+#include <QDateTime>
+
 #include <qhyccd.h>
 #include <string>
 #include <thread>
@@ -10,6 +12,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "cli_parser.hpp"
+#include "cvfits.hpp"
 
 bool keep_running = true;
 
@@ -24,6 +27,11 @@ enum BayerOrder {
 int takeExposures(const QMap<QString, QVariant> & config) {
 
     using namespace std;
+
+    double latitude = 0;
+    double longitude = 0;
+    double altitude = 0;
+    double temperature = -999;
 
     unsigned int roiStartX = 0;
     unsigned int roiStartY = 0;
@@ -47,7 +55,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     QStringList offsets     = config["exp-offsets"].toStringList();
     
     QString catalog_name    = config["catalog"].toString();
-    QString object_name     = config["object-id"].toString();
+    QString object_id       = config["object-id"].toString();
 
     // Initalize the camera
     int status = QHYCCD_SUCCESS;
@@ -104,11 +112,15 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     qDebug() << "Filter wheel exists?:" << filter_wheel_exists;
     qDebug() << "Filter wheel slots:" << filter_wheel_max_slots;
 
+    // See if we can get the camera tempature
+    bool can_get_temperature = (IsQHYCCDControlAvailable(handle, CONTROL_CURTEMP) == QHYCCD_SUCCESS);
+
     // Set up the camera and take images.
     for(int idx = 0; keep_running && idx < filters.length(); idx++) {
 
         int quantity = quantities[idx].toInt();
-        double duration_usec = durations[idx].toDouble() * 1E6;
+        double duration_sec  = durations[idx].toDouble();
+        double duration_usec = duration_sec * 1E6;
         double gain = gains[idx].toDouble();
         int offset = offsets[idx].toInt();
         QString filter_name = filters[idx];
@@ -154,6 +166,8 @@ int takeExposures(const QMap<QString, QVariant> & config) {
         cv::Mat color_image(raw_image.rows / 2, raw_image.cols / 2, CV_16UC3);
         cv::Mat display_image;
 
+        CVFITS cvfits;
+
         // take images
         for(int exposure_idx = 0; keep_running && exposure_idx < quantity; exposure_idx++) {
             qDebug() << "Starting exposure" << exposure_idx + 1 << "/" << quantity
@@ -187,6 +201,10 @@ int takeExposures(const QMap<QString, QVariant> & config) {
             status = GetQHYCCDSingleFrame(handle, &roiSizeX, &roiSizeY, &bpp, &channels, raw_image.ptr());
             const auto t_c = std::chrono::system_clock::now();
 
+            // Get additional time-dependent information from the camera.
+            if(can_get_temperature)
+                temperature = GetQHYCCDParam(handle, CONTROL_CURTEMP);
+
             // De-bayer the image if needed
             if(bayer_order == BAYER_ORDER_GBRG) {
                 cv::cvtColor(raw_image, color_image, cv::COLOR_BayerGBRG2BGR);
@@ -208,6 +226,27 @@ int takeExposures(const QMap<QString, QVariant> & config) {
             // Show the image.
             cv::imshow("display_window", display_image);
             cv::waitKey(1);
+
+            // Save the image data
+            QString filename = QDateTime::currentDateTimeUtc().toString(Qt::ISODate) +
+                "_" + catalog_name + "_" + object_id + ".fits";
+
+            cvfits.image = display_image;
+            cvfits.detector_name = camera_id;
+            cvfits.filter_name = filter_name.toStdString();
+            cvfits.exposure_start = t_a;
+            cvfits.exposure_end = t_b;
+            cvfits.readout_start = t_b;
+            cvfits.readout_end = t_c;
+            cvfits.exposure_duration_sec = duration_sec;
+            cvfits.catalog_name = catalog_name.toStdString();
+            cvfits.object_name = object_id.toStdString();
+            cvfits.latitude = latitude;
+            cvfits.longitude = longitude;
+            cvfits.altitude = altitude;
+            cvfits.temperature = temperature;
+
+            cvfits.saveToFITS(filename.toStdString());
         }
     }
 
