@@ -72,6 +72,17 @@ void printConfig(const QMap<QString, QVariant> & config) {
     }
 }
 
+void checkIntegerType(const QString & str, const QString & errorMessage) {
+
+    bool ok = true;
+
+    str.toInt(&ok);
+    if(!ok) {
+        qCritical() << "Error:" << errorMessage;
+        exit(-1);
+    }
+}
+
 void checkIntegerType(const QStringList & list, const QString & errorMessage) {
 
     bool ok = true;
@@ -82,6 +93,17 @@ void checkIntegerType(const QStringList & list, const QString & errorMessage) {
             qCritical() << "Error:" << errorMessage;
             exit(-1);
         }
+    }
+}
+
+void checkNumericType(const QString & str, const QString & errorMessage) {
+
+    bool ok = true;
+
+    str.toDouble(&ok);
+    if(!ok) {
+        qCritical() << "Error:" << errorMessage;
+        exit(-1);
     }
 }
 
@@ -128,6 +150,9 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["usb-transferbit"] =  "16";
     config["usb-traffic"] =  "10";
     config["camera-bin-mode"] = "1x1";
+    config["camera-temperature"] = "40"; // Values >= 40 imply active cooling should be disabled.
+    config["camera-cool-down"] = "0";
+    config["camera-warm-up"] = "0";
 
     // Configuration options typically specified in a exposure configuration block
     config["exp-quantities"] = "10";
@@ -158,7 +183,10 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     parser.addOption({"usb-traffic", "QHY USB Traffic Setting", "usb-traffic"});
     parser.addOption({"usb-transferbit", "Bits for image transfer. Options are 8 or 16", "usb-transferbit"});
     parser.addOption({{"camera-bin-mode", "cb"}, "Binning mode. Options: 1x1 - 9x9 further restricted by camera.", "camera-bin-mode"});
-  
+    parser.addOption({{"camera-temperature", "ct"}, "Set point for active cooling (Celsius)", "camera-temperature"});
+    parser.addOption({{"camera-cool-down", "cool-down", "cd"}, "Instruct the camera to begin cooling to the temperature in `camera-temperature`."});
+    parser.addOption({{"camera-warm-up", "warm-up", "cw"}, "Instruct the camera to begin warming up."});
+
     // exposure options
     parser.addOption({{"exp-quantities", "eq"}, "Number of exposures per filter", "exp-quantities"});
     parser.addOption({{"exp-durations", "ed"},  "Exposure duration, in seconds, per filter", "exp-durations"});
@@ -268,6 +296,19 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     if(allowed_bin_modes.indexOf(config["camera-bin-mode"]) == -1) {
         qCritical() << "Binning mode must be one of " << allowed_bin_modes;
         exit(-1);
+    }
+
+    // Handle cooling / temperature settings.
+    checkNumericType(config["camera-temperature"].toString(), "Camera temperature must be a numeric value.");
+    // Ensure `camera-cool-down` and `camera-warm-up` are mutually exclusive.
+    bool cool_down = parser.isSet("camera-cool-down");
+    bool warm_up   = parser.isSet("camera-warm-up");
+    if (warm_up) {
+        config["camera-cool-down"] = "0";
+        config["camera-warm-up"]   = "1";
+    } else if(cool_down) {
+        config["camera-cool-down"] = "1";
+        config["camera-warm-up"]   = "0";
     }
 
     // Clean up the configuration by removing child configurations

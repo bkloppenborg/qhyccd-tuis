@@ -20,8 +20,10 @@ void printConfig(const QMap<QString, QVariant> & config);
 
 QMap<QString, QVariant> parse_cli(const QCoreApplication & app);
 
+void checkIntegerType(const QString & str, const QString & errorMessage);
 void checkIntegerType(const QStringList & list, const QString & errorMessage);
 
+void checkNumericType(const QString & str, const QString & errorMessage);
 void checkNumericType(const QStringList & list, const QString & errorMessage);
 
 QStringList toStringList(const QVariant & var);

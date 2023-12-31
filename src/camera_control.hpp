@@ -20,4 +20,10 @@ int takeExposures(const QMap<QString, QVariant> & config);
 /// \return QHYCCD_SUCCESS on success, -1 otherwise.
 int setCameraBinMode(qhyccd_handle * handle, const QString & requestedMode, QString & setMode, int & binX, int & binY);
 
+void setTemperature(qhyccd_handle * handle, double setPointC);
+
+void monitorTemperature(qhyccd_handle * handle);
+
+int runCooler(const QMap<QString, QVariant> & config);
+
 #endif // CAMERA_CONTROL_H

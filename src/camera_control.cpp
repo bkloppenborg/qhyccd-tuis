@@ -31,6 +31,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     double latitude = 0;
     double longitude = 0;
     double altitude = 0;
+
     double temperature = -999;
 
     unsigned int roiStartX = 0;
@@ -41,19 +42,20 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     unsigned int channels;
     BayerOrder bayer_order = BAYER_ORDER_NONE;
 
-
-    // Unpack the configuration settings.
+    // Unpack the camera configuration settings
     string camera_id        = config["camera-id"].toString().toStdString();
     int usb_transferbit     = config["usb-transferbit"].toInt();
     int usb_traffic         = config["usb-traffic"].toInt();
-
     QStringList filter_names= config["filter-names"].toStringList(); 
+
+    // Unpack exposure configuration settings.
     QStringList quantities  = config["exp-quantities"].toStringList();
     QStringList durations   = config["exp-durations"].toStringList();
     QStringList filters     = config["exp-filters"].toStringList();
     QStringList gains       = config["exp-gains"].toStringList();
     QStringList offsets     = config["exp-offsets"].toStringList();
     
+    // Unpack object information.
     QString catalog_name    = config["catalog"].toString();
     QString object_id       = config["object-id"].toString();
 
@@ -69,6 +71,9 @@ int takeExposures(const QMap<QString, QVariant> & config) {
         qCritical() << "Camera does not support single frame exposures";
         exit(-1);
     }
+
+    // Determine if we can get the temperature
+    bool can_get_temperature = (IsQHYCCDControlAvailable(handle, CONTROL_CURTEMP) == QHYCCD_SUCCESS);
 
     // If this is a color camera, get the Bayer ordering.
     if(IsQHYCCDControlAvailable(handle, CAM_IS_COLOR) == QHYCCD_SUCCESS) {
@@ -111,9 +116,6 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     int filter_wheel_max_slots = GetQHYCCDParam(handle, CONTROL_CFWSLOTSNUM);
     qDebug() << "Filter wheel exists?:" << filter_wheel_exists;
     qDebug() << "Filter wheel slots:" << filter_wheel_max_slots;
-
-    // See if we can get the camera tempature
-    bool can_get_temperature = (IsQHYCCDControlAvailable(handle, CONTROL_CURTEMP) == QHYCCD_SUCCESS);
 
     // Set up the camera and take images.
     for(int idx = 0; keep_running && idx < filters.length(); idx++) {
@@ -335,4 +337,72 @@ int setCameraBinMode(qhyccd_handle * handle, const QString & requestedMode, QStr
     // If the binning mode is supported, go ahead and set it.
     qDebug() << "Setting bin mode to " << setMode;
     return SetQHYCCDBinMode(handle, binX, binY);
+}
+
+void setTemperature(qhyccd_handle * handle, double setPointC) {
+
+    int status = QHYCCD_SUCCESS;
+    status  = IsQHYCCDControlAvailable(handle, CONTROL_COOLER);
+
+    if(status == QHYCCD_SUCCESS) {
+        SetQHYCCDParam(handle, CONTROL_COOLER, setPointC);
+    } else {
+        qWarning() << "Camera does not support cooling";
+    }
+}
+
+void monitorTemperature(qhyccd_handle * handle) {
+    using namespace std;
+    
+    int status = QHYCCD_SUCCESS;
+    status  = IsQHYCCDControlAvailable(handle, CONTROL_COOLER);
+    status |= IsQHYCCDControlAvailable(handle, CONTROL_CURTEMP);
+
+    double temperature = -999;
+
+    if(status == QHYCCD_SUCCESS) {
+        while(keep_running) {
+            temperature = GetQHYCCDParam(handle, CONTROL_CURTEMP);
+            qDebug() << "Temperature:" << temperature;
+            std::this_thread::sleep_for(2s);
+        }
+    }
+}
+
+int runCooler(const QMap<QString, QVariant> & config) {
+    using namespace std;
+
+    bool cool_down   = (config["camera-cool-down"].toString() == "1");
+    double temperature = config["camera-temperature"].toDouble();
+    string camera_id   = config["camera-id"].toString().toStdString();
+
+    if(cool_down) {
+        qDebug() << "Starting camera cooler";
+    } else {
+        qDebug() << "Disabling camera cooler";
+        temperature = 40.0;
+    }
+
+    // Initalize the camera
+    int status = QHYCCD_SUCCESS;
+    status = InitQHYCCDResource();
+    qhyccd_handle * handle = OpenQHYCCD((char*) camera_id.c_str());
+
+    status  = InitQHYCCD(handle);
+    status |= IsQHYCCDControlAvailable(handle, CONTROL_COOLER);
+    status |= IsQHYCCDControlAvailable(handle, CONTROL_CURTEMP);
+
+    if(status != QHYCCD_SUCCESS) {
+        qCritical() << "Camera does not support cooling. Aborting.";
+        return -1;
+    }
+
+    setTemperature(handle, temperature);
+    //monitorTemperature(handle);
+
+    // shutdown cleanly
+    CloseQHYCCD(handle);
+    ReleaseQHYCCDResource();
+
+    return 0;
 }
