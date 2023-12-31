@@ -272,66 +272,67 @@ int setCameraBinMode(qhyccd_handle * handle, const QString & requestedMode, QStr
     binY = 1;
     CONTROL_ID control_id = CAM_BIN1X1MODE;
     setMode = "1x1";
-    int setSucceeded = QHYCCD_SUCCESS;
 
     // Pick the options for binning modes:
     if (requestedMode == "2x2") {
         binX = 2;
         binY = 2;
-        control_id = CAM_BIN2X2MODE;   
+        control_id = CAM_BIN2X2MODE;
+        setMode = requestedMode;
     } else if (requestedMode == "3x3") {
         binX = 3;
         binY = 3;
         control_id = CAM_BIN3X3MODE; 
+        setMode = requestedMode;
     } else if (requestedMode == "4x4") {
         binX = 4;
         binY = 4;
         control_id = CAM_BIN4X4MODE; 
+        setMode = requestedMode;
     } else if (requestedMode == "5x5") {
         qWarning() << "Warning: 5x5 binning is NOT supported. Defaulting to 4x4 binning";
         binX = 4;
         binY = 4;
         control_id = CAM_BIN4X4MODE; 
+        setMode = "4x4";
     } else if (requestedMode == "6x6") {
         binX = 6;
         binY = 6;
         control_id = CAM_BIN6X6MODE;
+        setMode = requestedMode;
     } else if (requestedMode == "7x7") {
         qWarning() << "Warning: 7x7 binning is NOT supported. Defaulting to 6x6 binning";
         binX = 6;
         binY = 6;
         control_id = CAM_BIN6X6MODE;
+        setMode = "6x6";
     } else if (requestedMode == "8x8") {
         binX = 8;
         binY = 8;
         control_id = CAM_BIN8X8MODE; 
+        setMode = requestedMode;
     } else if (requestedMode == "9x9") {
         qWarning() << "Warning: 9x9 binning is NOT supported. Defaulting to 8x8 binning";
         binX = 8;
         binY = 8;
         control_id = CAM_BIN8X8MODE; 
+        setMode = "8x8";
     }
 
-    // Check that the requested binning mode is supported and set it.
-    // Generate warning messages on failure.
-    if(IsQHYCCDControlAvailable(handle, control_id) == QHYCCD_SUCCESS) {
-        if(SetQHYCCDBinMode(handle, binX, binY) == QHYCCD_SUCCESS) {
-            qDebug() << "Binning mode set to" << requestedMode;
-            setMode = requestedMode;
-        } else {
-            qWarning() << "Binning mode failed to set. Defaulting to 1x1";
-            SetQHYCCDBinMode(handle, 1, 1);
-            setMode = "1x1";
-            binX = 1;
-            binY = 1;
-        }
-    } else {
-        qWarning() << "Binning mode" << requestedMode << "is not supported. Defaulting to 1x1";
-        SetQHYCCDBinMode(handle, 1, 1);
-        setMode = "1x1";
-        binX = 1;
-        binY = 1;
+    // We treat 1x1 binning as a special fallback mode. Handle that case separately.
+    if(control_id == CAM_BIN1X1MODE) {
+        return SetQHYCCDBinMode(handle, binX, binY);
     }
 
-    return setSucceeded;
+    // For all other binning modes, verify that the binning mode is supported.
+    // If it isn't supported, issue a warning and revert to 1x1 binning.
+    bool modeSupported = (IsQHYCCDControlAvailable(handle, control_id) == QHYCCD_SUCCESS);
+    if(!modeSupported) {
+        qWarning() << "Warning: Binning" << requestedMode << "is not supported, reverting to 1x1 binning";
+        return setCameraBinMode(handle, "1x1", setMode, binX, binY);
+    }
+
+    // If the binning mode is supported, go ahead and set it.
+    qDebug() << "Setting bin mode to " << setMode;
+    return SetQHYCCDBinMode(handle, binX, binY);
 }
