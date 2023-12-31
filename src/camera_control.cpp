@@ -2,7 +2,6 @@
 #include <QDebug>
 #include <QDateTime>
 
-#include <qhyccd.h>
 #include <string>
 #include <thread>
 #include <signal.h>
@@ -11,6 +10,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "camera_control.hpp"
 #include "cli_parser.hpp"
 #include "cvfits.hpp"
 
@@ -147,6 +147,10 @@ int takeExposures(const QMap<QString, QVariant> & config) {
         }
 
         // Configure the camera
+        QString requestedBinMode = config["camera-bin-mode"].toString();
+        QString setBinMode = config["camera-bin-mode"].toString();
+        int binX = 1;
+        int binY = 1;
         status  = SetQHYCCDStreamMode(handle, 0);
         status |= SetQHYCCDParam(handle, CONTROL_TRANSFERBIT, usb_transferbit);
         status |= SetQHYCCDParam(handle, CONTROL_USBTRAFFIC, usb_traffic);
@@ -156,13 +160,14 @@ int takeExposures(const QMap<QString, QVariant> & config) {
         status |= SetQHYCCDResolution(handle, roiStartX, roiStartY, roiSizeX, roiSizeY);
         status |= SetQHYCCDBinMode(handle, 1, 1);
         status |= SetQHYCCDBitsMode(handle, 16);
+        status |= setCameraBinMode(handle, requestedBinMode, setBinMode, binX, binY);
         if(status != QHYCCD_SUCCESS) {
             qCritical() << "Camera configuration failed";
             exit(-1);
         }
 
         // Allocate a buffers to store the images (temporary)
-        cv::Mat raw_image(roiSizeY, roiSizeX, CV_16U);
+        cv::Mat raw_image(roiSizeY / binX, roiSizeX / binY, CV_16U);
         cv::Mat color_image(raw_image.rows / 2, raw_image.cols / 2, CV_16UC3);
         cv::Mat display_image;
 
@@ -234,6 +239,9 @@ int takeExposures(const QMap<QString, QVariant> & config) {
             cvfits.image = display_image;
             cvfits.detector_name = camera_id;
             cvfits.filter_name = filter_name.toStdString();
+            cvfits.bin_mode_name = setBinMode.toStdString();
+            cvfits.xbinning = binX;
+            cvfits.ybinning = binY;
             cvfits.exposure_start = t_a;
             cvfits.exposure_end = t_b;
             cvfits.readout_start = t_b;
@@ -255,4 +263,75 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     ReleaseQHYCCDResource();
 
     return 0;
+}
+
+int setCameraBinMode(qhyccd_handle * handle, const QString & requestedMode, QString & setMode, int & binX, int & binY) {
+
+    // default to 1x1 binning
+    binX = 1;
+    binY = 1;
+    CONTROL_ID control_id = CAM_BIN1X1MODE;
+    setMode = "1x1";
+    int setSucceeded = QHYCCD_SUCCESS;
+
+    // Pick the options for binning modes:
+    if (requestedMode == "2x2") {
+        binX = 2;
+        binY = 2;
+        control_id = CAM_BIN2X2MODE;   
+    } else if (requestedMode == "3x3") {
+        binX = 3;
+        binY = 3;
+        control_id = CAM_BIN3X3MODE; 
+    } else if (requestedMode == "4x4") {
+        binX = 4;
+        binY = 4;
+        control_id = CAM_BIN4X4MODE; 
+    } else if (requestedMode == "5x5") {
+        qWarning() << "Warning: 5x5 binning is NOT supported. Defaulting to 4x4 binning";
+        binX = 4;
+        binY = 4;
+        control_id = CAM_BIN4X4MODE; 
+    } else if (requestedMode == "6x6") {
+        binX = 6;
+        binY = 6;
+        control_id = CAM_BIN6X6MODE;
+    } else if (requestedMode == "7x7") {
+        qWarning() << "Warning: 7x7 binning is NOT supported. Defaulting to 6x6 binning";
+        binX = 6;
+        binY = 6;
+        control_id = CAM_BIN6X6MODE;
+    } else if (requestedMode == "8x8") {
+        binX = 8;
+        binY = 8;
+        control_id = CAM_BIN8X8MODE; 
+    } else if (requestedMode == "9x9") {
+        qWarning() << "Warning: 9x9 binning is NOT supported. Defaulting to 8x8 binning";
+        binX = 8;
+        binY = 8;
+        control_id = CAM_BIN8X8MODE; 
+    }
+
+    // Check that the requested binning mode is supported and set it.
+    // Generate warning messages on failure.
+    if(IsQHYCCDControlAvailable(handle, control_id) == QHYCCD_SUCCESS) {
+        if(SetQHYCCDBinMode(handle, binX, binY) == QHYCCD_SUCCESS) {
+            qDebug() << "Binning mode set to" << requestedMode;
+            setMode = requestedMode;
+        } else {
+            qWarning() << "Binning mode failed to set. Defaulting to 1x1";
+            SetQHYCCDBinMode(handle, 1, 1);
+            setMode = "1x1";
+            binX = 1;
+            binY = 1;
+        }
+    } else {
+        qWarning() << "Binning mode" << requestedMode << "is not supported. Defaulting to 1x1";
+        SetQHYCCDBinMode(handle, 1, 1);
+        setMode = "1x1";
+        binX = 1;
+        binY = 1;
+    }
+
+    return setSucceeded;
 }

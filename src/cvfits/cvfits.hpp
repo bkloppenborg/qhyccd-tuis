@@ -17,6 +17,9 @@ public:
   // exposure information
   std::string filter_name = "";   ///< Name of photometric filter
   std::string detector_name = ""; ///< Name of detector/camera
+  std::string bin_mode_name = ""; ///< String that describes the binnind mode;
+  int xbinning = 1; ///< binning factor used on X axis
+  int ybinning = 1; ///< binning factor used on Y axis
 
   /// Time at which the exposure began.
   std::chrono::time_point<std::chrono::high_resolution_clock> exposure_start;

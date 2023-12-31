@@ -45,6 +45,21 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
                  "Temperature of sensor in Celsius",
                  &status);
 
+  fits_write_key(fptr, TSTRING, "BINNING",
+                 (void *) bin_mode_name.c_str(),
+                 "Binning mode for the camera",
+                 &status);
+
+  fits_write_key(fptr, TUINT, "XBINNING",
+                 (void *) &xbinning,
+                 "Bnning factor used on X axis",
+                 &status);
+
+  fits_write_key(fptr, TUINT, "YBINNING",
+                 (void *) &ybinning,
+                 "Bnning factor used on Y axis",
+                 &status);
+
   // Write color channel information for tri-color images.
   if(depth == 3) {
     fits_write_key(fptr, TSTRING, "CSPACE",  (void*) "RGB", "Colorspace of stored images", &status);

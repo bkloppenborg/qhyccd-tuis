@@ -127,6 +127,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["filter-names"] =  "None";   // an ordered list of filter names corresponding to slot numbers
     config["usb-transferbit"] =  "16";
     config["usb-traffic"] =  "10";
+    config["camera-bin-mode"] = "1x1";
 
     // Configuration options typically specified in a exposure configuration block
     config["exp-quantities"] = "10";
@@ -144,24 +145,27 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     parser.setApplicationDescription("Camera Configuration Example");
     parser.addHelpOption();
 
-    // QMap parameters
+    // Broad configuration options.
     parser.addOption({{"config-file", "f"},     "Path to configuration file", "config-file"});
     parser.addOption({{"camera-config", "cc"},  "Camera configuration name [optional]", "camera-config"});
     parser.addOption({{"exp-config", "ec"},     "Exposure configuration name [optional]", "exp-config"});
 
-    parser.addOption({{"exp-quantities", "eq"}, "Number of exposures per filter", "exp-quantities"});
-    parser.addOption({{"exp-durations", "ed"},  "Exposure duration, in seconds, per filter", "exp-durations"});
-    parser.addOption({{"exp-filters", "ef"},    "Names of filter to use", "exp-filters"});
-    parser.addOption({{"exp-gains", "eg"},      "The gain to use per each filter", "exp-gains"});
-    parser.addOption({{"exp-offsets", "eo"},    "Image offset per each filter", "exp-offsets"});
-
+    // Camera options
     parser.addOption({"catalog", "Catalog name", "catalog"});
     parser.addOption({"object-id", "Object identifier", "object"});
     parser.addOption({"camera-id", "QHY Camera Identifier", "camera-id"});
     parser.addOption({"filter-names", "List of filters in the camera", ""});
     parser.addOption({"usb-traffic", "QHY USB Traffic Setting", "usb-traffic"});
     parser.addOption({"usb-transferbit", "Bits for image transfer. Options are 8 or 16", "usb-transferbit"});
-    
+    parser.addOption({{"camera-bin-mode", "cb"}, "Binning mode. Options: 1x1 - 9x9 further restricted by camera.", "camera-bin-mode"});
+  
+    // exposure options
+    parser.addOption({{"exp-quantities", "eq"}, "Number of exposures per filter", "exp-quantities"});
+    parser.addOption({{"exp-durations", "ed"},  "Exposure duration, in seconds, per filter", "exp-durations"});
+    parser.addOption({{"exp-filters", "ef"},    "Names of filter to use", "exp-filters"});
+    parser.addOption({{"exp-gains", "eg"},      "The gain to use per each filter", "exp-gains"});
+    parser.addOption({{"exp-offsets", "eo"},    "Image offset per each filter", "exp-offsets"});
+
     // Other parameters
     parser.addOption(QCommandLineOption("dump-config", "Dump default configuration to file", "file"));
 
@@ -258,6 +262,13 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
         offsets.append(offsets.at(0));
     }
     config["exp-offsets"] = offsets;
+
+    // Check that the binning mode is allowed.
+    QStringList allowed_bin_modes = {"1x1", "2x2", "3x3", "4x4", "5x5", "6x6", "7x7", "8x8", "9x9"};
+    if(allowed_bin_modes.indexOf(config["camera-bin-mode"]) == -1) {
+        qCritical() << "Binning mode must be one of " << allowed_bin_modes;
+        exit(-1);
+    }
 
     // Clean up the configuration by removing child configurations
     for(const QString & key: config.keys()) {
