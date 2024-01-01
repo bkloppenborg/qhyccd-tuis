@@ -144,6 +144,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["camera-config"] = "";
     config["exp-config"] = "";
     config["no-gui"] = "0";
+    config["no-save"] = "0";
 
     // Configuration options typically specified in a camera block
     config["camera-id"] =  "None";
@@ -176,6 +177,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     parser.addOption({{"camera-config", "cc"},  "Camera configuration name [optional]", "camera-config"});
     parser.addOption({{"exp-config", "ec"},     "Exposure configuration name [optional]", "exp-config"});
     parser.addOption({"no-gui", "Disable all GUI elements"});   // boolean
+    parser.addOption({{"no-save", "preview"}, "Disable saving FITS files"});   // boolean
 
     // Camera options
     parser.addOption({"catalog", "Catalog name", "catalog"});
@@ -246,6 +248,11 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
         config["no-gui"] = "1";
     else
         config["no-gui"] = "0";
+
+    if(parser.isSet("no-save"))
+        config["no-save"] = "1";
+    else
+        config["no-save"] = "0";
 
         // Check that the camera is specified
     if(config["camera-id"] == "None") {

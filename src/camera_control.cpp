@@ -44,6 +44,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
     // Unpack application settings
     bool enable_gui = (config["no-gui"] == "0");
+    bool save_fits =  (config["no-save"] == "0");
 
     // Unpack the camera configuration settings
     string camera_id        = config["camera-id"].toString().toStdString();
@@ -233,35 +234,39 @@ int takeExposures(const QMap<QString, QVariant> & config) {
                 display_image = raw_image;
             }
 
+            // Save FITS files when instructed.
+            if(save_fits) {
+                // Save the image data
+                QString filename = QDateTime::currentDateTimeUtc().toString(Qt::ISODate) +
+                    "_" + catalog_name + "_" + object_id + ".fits";
+
+                cvfits.image = display_image;
+                cvfits.detector_name = camera_id;
+                cvfits.filter_name = filter_name.toStdString();
+                cvfits.bin_mode_name = setBinMode.toStdString();
+                cvfits.xbinning = binX;
+                cvfits.ybinning = binY;
+                cvfits.exposure_start = t_a;
+                cvfits.exposure_end = t_b;
+                cvfits.readout_start = t_b;
+                cvfits.readout_end = t_c;
+                cvfits.exposure_duration_sec = duration_sec;
+                cvfits.catalog_name = catalog_name.toStdString();
+                cvfits.object_name = object_id.toStdString();
+                cvfits.latitude = latitude;
+                cvfits.longitude = longitude;
+                cvfits.altitude = altitude;
+                cvfits.temperature = temperature;
+
+                cvfits.saveToFITS(filename.toStdString());
+            }
+
+            // Display the image when instructed.
             if(enable_gui) {
                 // Show the image.
                 cv::imshow("display_window", display_image);
                 cv::waitKey(1);
             }
-
-            // Save the image data
-            QString filename = QDateTime::currentDateTimeUtc().toString(Qt::ISODate) +
-                "_" + catalog_name + "_" + object_id + ".fits";
-
-            cvfits.image = display_image;
-            cvfits.detector_name = camera_id;
-            cvfits.filter_name = filter_name.toStdString();
-            cvfits.bin_mode_name = setBinMode.toStdString();
-            cvfits.xbinning = binX;
-            cvfits.ybinning = binY;
-            cvfits.exposure_start = t_a;
-            cvfits.exposure_end = t_b;
-            cvfits.readout_start = t_b;
-            cvfits.readout_end = t_c;
-            cvfits.exposure_duration_sec = duration_sec;
-            cvfits.catalog_name = catalog_name.toStdString();
-            cvfits.object_name = object_id.toStdString();
-            cvfits.latitude = latitude;
-            cvfits.longitude = longitude;
-            cvfits.altitude = altitude;
-            cvfits.temperature = temperature;
-
-            cvfits.saveToFITS(filename.toStdString());
         }
     }
 
