@@ -179,7 +179,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
 
     // Camera options
     parser.addOption({"catalog", "Catalog name", "catalog"});
-    parser.addOption({"object-id", "Object identifier", "object"});
+    parser.addOption({{"object-id", "object"}, "Object identifier", "object"});
     parser.addOption({"camera-id", "QHY Camera Identifier", "camera-id"});
     parser.addOption({"filter-names", "List of filters in the camera", ""});
     parser.addOption({"usb-traffic", "QHY USB Traffic Setting", "usb-traffic"});
