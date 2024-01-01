@@ -34,10 +34,10 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
     double temperature = -999;
 
-    unsigned int roiStartX = 0;
-    unsigned int roiStartY = 0;
-    unsigned int roiSizeX = 1;
-    unsigned int roiSizeY = 1;
+    uint32_t roiStartX = 0;
+    uint32_t roiStartY = 0;
+    uint32_t roiSizeX = 1;
+    uint32_t roiSizeY = 1;
     unsigned int bpp;
     unsigned int channels;
     BayerOrder bayer_order = BAYER_ORDER_NONE;
@@ -106,12 +106,9 @@ int takeExposures(const QMap<QString, QVariant> & config) {
         }
     }
 
-    // Get the maximum image size in 1x1 binning mode and set that as the default
-    double chip_w, chip_h, pixel_w, pixel_h;
-    uint32_t image_w, image_h, bit_depth;
-    GetQHYCCDChipInfo(handle, &chip_w, &chip_h, &image_w, &image_h, &pixel_w, &pixel_h, &bit_depth);
-    roiSizeX = image_w;
-    roiSizeY = image_h;
+    // Get the maximum image size, ignoring the overscan area, in 1x1 binning mode.
+    // Use this as the default image size.
+    GetQHYCCDEffectiveArea(handle, &roiStartX, &roiStartY, &roiSizeX, &roiSizeY);
 
     // Setup the filter wheel
     char fw_cmd_position[8] = {0};
