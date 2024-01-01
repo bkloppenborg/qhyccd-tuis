@@ -143,6 +143,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["config-file"] =  "";
     config["camera-config"] = "";
     config["exp-config"] = "";
+    config["no-gui"] = "0";
 
     // Configuration options typically specified in a camera block
     config["camera-id"] =  "None";
@@ -174,6 +175,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     parser.addOption({{"config-file", "f"},     "Path to configuration file", "config-file"});
     parser.addOption({{"camera-config", "cc"},  "Camera configuration name [optional]", "camera-config"});
     parser.addOption({{"exp-config", "ec"},     "Exposure configuration name [optional]", "exp-config"});
+    parser.addOption({"no-gui", "Disable all GUI elements"});   // boolean
 
     // Camera options
     parser.addOption({"catalog", "Catalog name", "catalog"});
@@ -239,7 +241,13 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     // Verify that the configuration makes sense
     //
 
-    // Check that the camera is specified
+    // Check application-wide settings
+    if(parser.isSet("no-gui"))
+        config["no-gui"] = "1";
+    else
+        config["no-gui"] = "0";
+
+        // Check that the camera is specified
     if(config["camera-id"] == "None") {
         qCritical() << "Critical: Camera ID not specified. Exiting.";
         exit(-1);
@@ -306,9 +314,11 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     if (warm_up) {
         config["camera-cool-down"] = "0";
         config["camera-warm-up"]   = "1";
+        config["no-gui"] = "1"; // shut off the GUI, it isn't needed.
     } else if(cool_down) {
         config["camera-cool-down"] = "1";
         config["camera-warm-up"]   = "0";
+        config["no-gui"] = "1"; // shut off the GUI, it isn't needed.
     }
 
     // Clean up the configuration by removing child configurations

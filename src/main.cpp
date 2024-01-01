@@ -26,23 +26,28 @@ int main(int argc, char *argv[]) {
     sigIntHandler.sa_flags = 0;
     sigaction(SIGINT, &sigIntHandler, NULL);
 
+
     // Configure the application
     QApplication app(argc, argv);
     QApplication::setOrganizationName("Kloppenborg.net");
     QApplication::setOrganizationDomain("kloppenborg.net");
     QApplication::setApplicationName("qhyccd-tuis");
 
+    // parse the command line arguments.
+    QMap<QString, QVariant> config = parse_cli(app);
+
+    bool enable_gui = (config["no-gui"] == "0");
+
     // Create the worker.
     WorkerThread * worker = new WorkerThread();
 
-    // Create a window, initialize it with an all black background.
-    cv::namedWindow("display_window", cv::WINDOW_NORMAL);
-    cv::resizeWindow("display_window", 3856*0.3, 2180*0.3);
-    cv::Mat temp(2180, 3856, CV_16U);
-    cv::imshow("display_window", temp);
-
-    // parse the command line arguments.
-    QMap<QString, QVariant> config = parse_cli(app);
+    if(enable_gui) {
+        // Create a window, initialize it with an all black background.
+        cv::namedWindow("display_window", cv::WINDOW_NORMAL);
+        cv::resizeWindow("display_window", 3856*0.3, 2180*0.3);
+        cv::Mat temp(2180, 3856, CV_16U);
+        cv::imshow("display_window", temp);
+    }
 
     // Configure the worker thread
     app.connect(worker, &WorkerThread::finished, worker, &QObject::deleteLater);

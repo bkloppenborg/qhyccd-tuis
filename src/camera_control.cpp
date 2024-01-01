@@ -42,6 +42,9 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     unsigned int channels;
     BayerOrder bayer_order = BAYER_ORDER_NONE;
 
+    // Unpack application settings
+    bool enable_gui = (config["no-gui"] == "0");
+
     // Unpack the camera configuration settings
     string camera_id        = config["camera-id"].toString().toStdString();
     int usb_transferbit     = config["usb-transferbit"].toInt();
@@ -230,9 +233,11 @@ int takeExposures(const QMap<QString, QVariant> & config) {
                 display_image = raw_image;
             }
 
-            // Show the image.
-            cv::imshow("display_window", display_image);
-            cv::waitKey(1);
+            if(enable_gui) {
+                // Show the image.
+                cv::imshow("display_window", display_image);
+                cv::waitKey(1);
+            }
 
             // Save the image data
             QString filename = QDateTime::currentDateTimeUtc().toString(Qt::ISODate) +
