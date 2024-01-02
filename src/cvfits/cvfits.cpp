@@ -8,6 +8,8 @@
 #include <fitsio2.h>
 #include <math.h>
 
+#include <opencv2/core.hpp>
+#include <QDebug>
 
 void CVFITS::saveToFITS(std::string filename, bool overwrite) {
 
@@ -18,19 +20,31 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
   long height = this->image.rows;
   long depth = this->image.channels();
 
-
   int bitpix = USHORT_IMG;
   long naxis = 3;
   long naxes[3] = { (long int) width, (long int) height, (long int) depth };
 
-  int nelements = width * height * depth;
+  int nelements = width * height;
 
   // open the file
   fits_create_file(&fptr, filename.c_str(), &status);
 
-  // write the ImageData
-  fits_create_img(fptr, bitpix, naxis, naxes, &status);
-  fits_write_img(fptr, TUSHORT, 1, nelements, image.ptr(), &status);
+  if(depth > 1) {
+    // split the image channels, write them out to the image independently.
+    std::vector<cv::Mat> channels;
+    cv::split(this->image, channels);
+
+    fits_create_img(fptr, bitpix, naxis, naxes, &status);
+    for(int c = 0; c < depth; c++) {
+      long fpixel[3] = {1, 1, c+1};
+      fits_write_pix(fptr, TUSHORT, fpixel, nelements, channels[c].ptr(), &status);
+    }
+
+  } else {
+    // single channel image, write it out.
+    fits_create_img(fptr, bitpix, naxis, naxes, &status);
+    fits_write_img(fptr, TUSHORT, 0, nelements, image.ptr(), &status);
+  }
 
   //
   // Information about the detector
@@ -66,8 +80,8 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
     fits_write_key(fptr, TSTRING, "CTYPE3",  (void*) "BAND-SET", "Type of color part in 4-3 notation", &status);
     fits_write_key(fptr, TSTRING, "CNAME3",  (void*) "Color-Space", "Description", &status);
     fits_write_key(fptr, TSTRING, "CSBAND1", (void*) "Blue", "Color Band for Channel 1", &status);
-    fits_write_key(fptr, TSTRING, "CSBAND1", (void*) "Green", "Color Band for Channel 1", &status);
-    fits_write_key(fptr, TSTRING, "CSBAND1", (void*) "Red", "Color Band for Channel 1", &status);
+    fits_write_key(fptr, TSTRING, "CSBAND1", (void*) "Green", "Color Band for Channel 2", &status);
+    fits_write_key(fptr, TSTRING, "CSBAND1", (void*) "Red", "Color Band for Channel 3", &status);
   }
 
   //
