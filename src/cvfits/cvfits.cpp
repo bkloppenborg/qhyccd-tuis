@@ -45,7 +45,9 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
   } else {
     // single channel image, write it out.
     fits_create_img(fptr, bitpix, naxis, naxes, &status);
-    fits_write_img(fptr, TUSHORT, 0, nelements, image.ptr(), &status);
+    qDebug() << "A" << status;
+    fits_write_img(fptr, TUSHORT, 1, nelements, this->image.data, &status);
+    qDebug() << "B" << status;
   }
 
   //
