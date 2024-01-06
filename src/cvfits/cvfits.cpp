@@ -34,9 +34,11 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
     std::vector<cv::Mat> channels;
     cv::split(this->image, channels);
 
+    // Write out each channel independently.
+    // NOTE: OpenCV stores data in BGR order.
     fits_create_img(fptr, bitpix, naxis, naxes, &status);
     for(int c = 0; c < depth; c++) {
-      long fpixel[3] = {1, 1, c+1};
+      long fpixel[3] = {1, 1, 1+c};
       fits_write_pix(fptr, TUSHORT, fpixel, nelements, channels[c].ptr(), &status);
     }
 
@@ -79,9 +81,10 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
     fits_write_key(fptr, TSTRING, "CSPACE",  (void*) "RGB", "Colorspace of stored images", &status);
     fits_write_key(fptr, TSTRING, "CTYPE3",  (void*) "BAND-SET", "Type of color part in 4-3 notation", &status);
     fits_write_key(fptr, TSTRING, "CNAME3",  (void*) "Color-Space", "Description", &status);
+    // NOTE: OpenCV stores images in BGR order.
     fits_write_key(fptr, TSTRING, "CSBAND1", (void*) "Blue", "Color Band for Channel 1", &status);
-    fits_write_key(fptr, TSTRING, "CSBAND1", (void*) "Green", "Color Band for Channel 2", &status);
-    fits_write_key(fptr, TSTRING, "CSBAND1", (void*) "Red", "Color Band for Channel 3", &status);
+    fits_write_key(fptr, TSTRING, "CSBAND2", (void*) "Green", "Color Band for Channel 2", &status);
+    fits_write_key(fptr, TSTRING, "CSBAND3", (void*) "Red", "Color Band for Channel 3", &status);
   }
 
   //
