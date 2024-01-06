@@ -1,6 +1,6 @@
 #include <opencv2/opencv.hpp>
 
-#include "scale_image.hpp"
+#include "image_calibration.hpp"
 
 cv::Mat scaleImageLinear_CV_16UC1(const cv::Mat & rawImage) {
 

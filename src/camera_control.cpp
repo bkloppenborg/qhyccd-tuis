@@ -6,7 +6,7 @@
 #include <thread>
 #include <signal.h>
 
-#include<opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
@@ -14,7 +14,7 @@
 #include "camera_control.hpp"
 #include "cli_parser.hpp"
 #include "cvfits.hpp"
-#include "scale_image.hpp"
+#include "image_calibration.hpp"
 
 bool keep_running = true;
 
