@@ -6,6 +6,7 @@
 #include <thread>
 #include <signal.h>
 
+#include<opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
@@ -13,8 +14,10 @@
 #include "camera_control.hpp"
 #include "cli_parser.hpp"
 #include "cvfits.hpp"
+#include "scale_image.hpp"
 
 bool keep_running = true;
+
 
 enum BayerOrder {
     BAYER_ORDER_GBRG,
@@ -260,6 +263,9 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
             // Display the image when instructed.
             if(enable_gui) {
+
+                display_image = scaleImageLinear(display_image);
+
                 // Show the image.
                 cv::imshow("display_window", display_image);
                 cv::waitKey(1);
