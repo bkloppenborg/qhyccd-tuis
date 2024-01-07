@@ -135,7 +135,7 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
   std::string t_start = to_iso_8601(exposure_start);
   fits_write_key(fptr, TSTRING, "DATE-OBS", (void *)t_start.c_str(),
                  "ISO-8601 date-time for start exposure", &status);
-                 
+
   fits_write_key(fptr, TSTRING, "DATE-BEG",
                  (void*)t_start.c_str(),
                  "ISO-8601 date-time for start exposure", &status);

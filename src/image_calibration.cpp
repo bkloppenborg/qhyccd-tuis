@@ -25,7 +25,7 @@ cv::Mat scaleImageLinear_CV_16UC1(const cv::Mat & rawImage) {
 
     cv::subtract(scaledImage, min, scaledImage);
     cv::multiply(scaledImage, scale, scaledImage);
-    
+
     return scaledImage;
 }
 

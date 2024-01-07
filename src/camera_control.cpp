@@ -56,7 +56,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     string camera_id        = config["camera-id"].toString().toStdString();
     int usb_transferbit     = config["usb-transferbit"].toInt();
     int usb_traffic         = config["usb-traffic"].toInt();
-    QStringList filter_names= config["filter-names"].toStringList(); 
+    QStringList filter_names= config["filter-names"].toStringList();
     QDir calDir(configFile.absoluteDir().absolutePath() + QDir::separator() + config["camera-cal-dir"].toString());
 
     // Unpack exposure configuration settings.
@@ -65,7 +65,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     QStringList filters     = config["exp-filters"].toStringList();
     QStringList gains       = config["exp-gains"].toStringList();
     QStringList offsets     = config["exp-offsets"].toStringList();
-    
+
     // Unpack object information.
     QString catalog_name    = config["catalog"].toString();
     QString object_id       = config["object-id"].toString();
@@ -139,7 +139,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
             qWarning() << "Filter" << filter_name << "is not installed, skipping";
             continue;
         }
-        
+
         // Change the filter
         if(filter_wheel_exists && filter_wheel_max_slots > 0) {
             qDebug() << "Commanding filter wheel to change to" << filter_name << "slot" << filter_idx;
@@ -192,7 +192,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
         // Show the image.
         cv::imshow("display_window", flat_image);
-        cv::waitKey(-1);        
+        cv::waitKey(-1);
 
         // Allocate a buffers to store the images
         cv::Mat raw_image(roiSizeY / binX, roiSizeX / binY, CV_16U);
@@ -320,18 +320,18 @@ int setCameraBinMode(qhyccd_handle * handle, const QString & requestedMode, QStr
     } else if (requestedMode == "3x3") {
         binX = 3;
         binY = 3;
-        control_id = CAM_BIN3X3MODE; 
+        control_id = CAM_BIN3X3MODE;
         setMode = requestedMode;
     } else if (requestedMode == "4x4") {
         binX = 4;
         binY = 4;
-        control_id = CAM_BIN4X4MODE; 
+        control_id = CAM_BIN4X4MODE;
         setMode = requestedMode;
     } else if (requestedMode == "5x5") {
         qWarning() << "Warning: 5x5 binning is NOT supported. Defaulting to 4x4 binning";
         binX = 4;
         binY = 4;
-        control_id = CAM_BIN4X4MODE; 
+        control_id = CAM_BIN4X4MODE;
         setMode = "4x4";
     } else if (requestedMode == "6x6") {
         binX = 6;
@@ -347,13 +347,13 @@ int setCameraBinMode(qhyccd_handle * handle, const QString & requestedMode, QStr
     } else if (requestedMode == "8x8") {
         binX = 8;
         binY = 8;
-        control_id = CAM_BIN8X8MODE; 
+        control_id = CAM_BIN8X8MODE;
         setMode = requestedMode;
     } else if (requestedMode == "9x9") {
         qWarning() << "Warning: 9x9 binning is NOT supported. Defaulting to 8x8 binning";
         binX = 8;
         binY = 8;
-        control_id = CAM_BIN8X8MODE; 
+        control_id = CAM_BIN8X8MODE;
         setMode = "8x8";
     }
 
@@ -389,7 +389,7 @@ void setTemperature(qhyccd_handle * handle, double setPointC) {
 
 void monitorTemperature(qhyccd_handle * handle) {
     using namespace std;
-    
+
     int status = QHYCCD_SUCCESS;
     status  = IsQHYCCDControlAvailable(handle, CONTROL_COOLER);
     status |= IsQHYCCDControlAvailable(handle, CONTROL_CURTEMP);

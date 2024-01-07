@@ -33,5 +33,5 @@ target_link_libraries(cli-test Qt6::Core cli-parser)
 
 # Camera control application
 add_executable(qhy-camera-control main.cpp camera_control.cpp WorkerThread.cpp image_calibration.cpp)
-target_link_libraries(qhy-camera-control QHYCCD::QHYCCD Qt6::Core Qt6::Widgets ${OpenCV_LIBS} 
+target_link_libraries(qhy-camera-control QHYCCD::QHYCCD Qt6::Core Qt6::Widgets ${OpenCV_LIBS}
     cli-parser cvfits)

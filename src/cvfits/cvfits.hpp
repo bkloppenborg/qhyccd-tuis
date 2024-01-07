@@ -70,7 +70,7 @@ public:
   /// \param filename Name of the output file.
   /// \param overwrite Whether or not the file should overwrite an existing image.
   void saveToFITS(std::string filename, bool overwrite = false);
-  
+
   //
 };
 
