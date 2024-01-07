@@ -11,6 +11,48 @@
 #include <opencv2/core.hpp>
 #include <QDebug>
 
+CVFITS::CVFITS(std::string filename) {
+  fitsfile * fptr;
+  int status = 0;
+  int nfound = 1;
+  long naxes[3] = {0, 0, 0};
+  int nullval = 0;
+  int anynull = 0;
+
+  // open the file
+  fits_open_file(&fptr, filename.c_str(), READONLY, &status);
+
+  // Get the dimensions of the image
+  fits_read_keys_lng(fptr, "NAXIS", 1, 3, naxes, &nfound, &status);
+  int width = naxes[0];
+  int height = naxes[1];
+  int depth = naxes[2];
+  qDebug() << width << height << depth;
+
+  int nelements = width * height;
+
+  // Read in the image
+  if(naxes[2] == 1) {
+    // single channel image
+    this->image = cv::Mat(height, width, CV_16UC1);
+    fits_read_img(fptr, TUSHORT, 1, nelements, &nullval, this->image.ptr(), &anynull, &status);
+
+  } else {
+    // multi-channel image
+    std::vector<cv::Mat> channels;
+    for(int i = 0; i < depth; i++)
+      channels.push_back(cv::Mat(height, width, CV_16UC1));
+
+    for(int i = 0; i < depth; i++) {
+      qDebug() << i;
+      long fpixel[3] = {1, 1, 1+i};
+      fits_read_pix(fptr, TUSHORT, fpixel, nelements, &nullval, channels[i].ptr(), &anynull, &status);
+    }
+
+    cv::merge(channels, this->image);
+  }
+ }
+
 void CVFITS::saveToFITS(std::string filename, bool overwrite) {
 
   fitsfile * fptr;
@@ -37,9 +79,9 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
     // Write out each channel independently.
     // NOTE: OpenCV stores data in BGR order.
     fits_create_img(fptr, bitpix, naxis, naxes, &status);
-    for(int c = 0; c < depth; c++) {
-      long fpixel[3] = {1, 1, 1+c};
-      fits_write_pix(fptr, TUSHORT, fpixel, nelements, channels[c].ptr(), &status);
+    for(int i = 0; i < depth; i++) {
+      long fpixel[3] = {1, 1, 1+i};
+      fits_write_pix(fptr, TUSHORT, fpixel, nelements, channels[i].ptr(), &status);
     }
 
   } else {

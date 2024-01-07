@@ -61,6 +61,8 @@ public:
   /// Default constructor.
   CVFITS() {}
 
+  CVFITS(std::string filename);
+
   /// Default destruct.
   ~CVFITS() {}
 

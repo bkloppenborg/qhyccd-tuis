@@ -155,6 +155,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["camera-temperature"] = "40"; // Values >= 40 imply active cooling should be disabled.
     config["camera-cool-down"] = "0";
     config["camera-warm-up"] = "0";
+    config["camera-cal-dir"] = "";
 
     // Configuration options typically specified in a exposure configuration block
     config["exp-quantities"] = "10";
@@ -190,8 +191,9 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     parser.addOption({{"camera-temperature", "ct"}, "Set point for active cooling (Celsius)", "camera-temperature"});
     parser.addOption({{"camera-cool-down", "cool-down", "cd"}, "Instruct the camera to begin cooling to the temperature in `camera-temperature`."});
     parser.addOption({{"camera-warm-up", "warm-up", "cw"}, "Instruct the camera to begin warming up."});
+    parser.addOption({{"camera-cal-dir", "cd"}, "Location for camera calibration images", "camera-cal-dir"});
 
-    // exposure options
+    // Exposure options
     parser.addOption({{"exp-quantities", "eq"}, "Number of exposures per filter", "exp-quantities"});
     parser.addOption({{"exp-durations", "ed"},  "Exposure duration, in seconds, per filter", "exp-durations"});
     parser.addOption({{"exp-filters", "ef"},    "Names of filter to use", "exp-filters"});
