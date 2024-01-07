@@ -149,6 +149,9 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
             } while (strcmp(fw_cmd_position, fw_act_position) != 0);
 
+            // Wait an additional second for the filter wheel motion to complete.
+            std::this_thread::sleep_for(1s);
+
             qDebug() << "Filter change to" << filter_name << "successful";
         }
 
