@@ -9,7 +9,6 @@
 #include <math.h>
 
 #include <opencv2/core.hpp>
-#include <QDebug>
 
 CVFITS::CVFITS(std::string filename) {
   fitsfile * fptr;
@@ -27,7 +26,6 @@ CVFITS::CVFITS(std::string filename) {
   int width = naxes[0];
   int height = naxes[1];
   int depth = naxes[2];
-  qDebug() << width << height << depth;
 
   int nelements = width * height;
 
@@ -44,7 +42,6 @@ CVFITS::CVFITS(std::string filename) {
       channels.push_back(cv::Mat(height, width, CV_16UC1));
 
     for(int i = 0; i < depth; i++) {
-      qDebug() << i;
       long fpixel[3] = {1, 1, 1+i};
       fits_read_pix(fptr, TUSHORT, fpixel, nelements, &nullval, channels[i].ptr(), &anynull, &status);
     }

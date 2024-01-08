@@ -50,14 +50,13 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     // Unpack application settings
     bool enable_gui = (config["no-gui"] == "0");
     bool save_fits =  (config["no-save"] == "0");
-    QFileInfo configFile(config["config-file"].toString());
 
     // Unpack the camera configuration settings
     string camera_id        = config["camera-id"].toString().toStdString();
     int usb_transferbit     = config["usb-transferbit"].toInt();
     int usb_traffic         = config["usb-traffic"].toInt();
     QStringList filter_names= config["filter-names"].toStringList();
-    QDir calDir(configFile.absoluteDir().absolutePath() + QDir::separator() + config["camera-cal-dir"].toString());
+    QString cal_dir         = config["camera-cal-dir"].toString();
 
     // Unpack exposure configuration settings.
     QStringList quantities  = config["exp-quantities"].toStringList();
@@ -181,7 +180,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
         // Load the flat file
         cv::Mat flat_image = cv::Mat::ones(roiSizeY / binX, roiSizeX / binY, CV_16U);
-        QString flatFileName = calDir.absolutePath() + QDir::separator() + "average_flat_" + filter_name + ".fits";
+        QString flatFileName = cal_dir + QDir::separator() + "average_flat_" + filter_name + ".fits";
         QFileInfo flatFileInfo(flatFileName);
         if(flatFileInfo.exists() && flatFileInfo.isFile()) {
             // Load the image and scale it to the image duration
@@ -189,10 +188,6 @@ int takeExposures(const QMap<QString, QVariant> & config) {
             CVFITS cvFlat(flatFileName.toStdString());
             cv::multiply(cvFlat.image, duration_sec, flat_image);
         }
-
-        // Show the image.
-        cv::imshow("display_window", flat_image);
-        cv::waitKey(-1);
 
         // Allocate a buffers to store the images
         cv::Mat raw_image(roiSizeY / binX, roiSizeX / binY, CV_16U);

@@ -1,6 +1,8 @@
 #include <QSettings>
 #include <QtDebug>
 #include <QVariant>
+#include <QFileInfo>
+#include <QDir>
 
 #include "cli_parser.hpp"
 
@@ -328,6 +330,14 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
         config["camera-cool-down"] = "1";
         config["camera-warm-up"]   = "0";
         config["no-gui"] = "1"; // shut off the GUI, it isn't needed.
+    }
+
+    // Figure out where the camera stores its calibration files.
+    QString cal_rel_dir = config["camera-cal-dir"].toString();
+    if(cal_rel_dir.length() > 0) {
+        QFileInfo configFile(config["config-file"].toString());
+        QDir calDir(configFile.absoluteDir().absolutePath() + QDir::separator() + config["camera-cal-dir"].toString());
+        config["camera-cal-dir"] = calDir.absolutePath();
     }
 
     // Clean up the configuration by removing child configurations
