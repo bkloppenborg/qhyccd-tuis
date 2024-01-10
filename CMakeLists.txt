@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.22)
 # Define a meaningful name for your project that doesn't include spaces. This
 # will be used in multiple locations.
-PROJECT(Foo)
+PROJECT(QHYCCDTUIS)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 # Define standard installation paths. See /CMakeModules/InstallDirs.cmake
@@ -19,9 +19,9 @@ SET(VENDOR_CONTACT "Brian Kloppenborg <brian@kloppenborg.net>")
 # Set the project version. You probably want to change "PROJECT" to something specific
 # in order to avoid bashing CMake namespaces. Also change in the CMakeModules/Version.cmake
 # and CMakeModules/CPack.cmake files
-SET(PROJECT_VERSION_MAJOR "0")
+SET(PROJECT_VERSION_MAJOR "1")
 SET(PROJECT_VERSION_MINOR "0")
-SET(PROJECT_VERSION_PATCH "1")
+SET(PROJECT_VERSION_PATCH "0")
 SET(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 # Define configuration parameters

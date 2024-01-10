@@ -18,12 +18,13 @@ find_package(OpenCV REQUIRED)
 # Include the primary project include directory
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-#
+# Build library to simplify OpenCV <-> FITS data conversion.
 add_subdirectory(cvfits)
 
 # List camera application
 add_executable(qhy-list-cameras list_cameras.cpp)
 target_link_libraries(qhy-list-cameras QHYCCD::QHYCCD)
+install(TARGETS qhy-list-cameras)
 
 # Command line interface and test application
 add_library(cli-parser cli_parser.cpp)
@@ -35,3 +36,4 @@ target_link_libraries(cli-test Qt6::Core cli-parser)
 add_executable(qhy-camera-control main.cpp camera_control.cpp WorkerThread.cpp image_calibration.cpp)
 target_link_libraries(qhy-camera-control QHYCCD::QHYCCD Qt6::Core Qt6::Widgets ${OpenCV_LIBS}
     cli-parser cvfits)
+install(TARGETS qhy-camera-control)
