@@ -147,6 +147,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["exp-config"] = "";
     config["no-gui"] = "0";
     config["no-save"] = "0";
+    config["save-dir"] = ".";
 
     // Configuration options typically specified in a camera block
     config["camera-id"] =  "None";
@@ -181,6 +182,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     parser.addOption({{"exp-config", "ec"},     "Exposure configuration name [optional]", "exp-config"});
     parser.addOption({"no-gui", "Disable all GUI elements"});   // boolean
     parser.addOption({{"no-save", "preview"}, "Disable saving FITS files"});   // boolean
+    parser.addOption({{"save-dir", "sd"},       "Directory in which files will be saved", "save-dir"});
 
     // Camera options
     parser.addOption({"catalog", "Catalog name", "catalog"});
@@ -339,6 +341,11 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
         QDir calDir(configFile.absoluteDir().absolutePath() + QDir::separator() + config["camera-cal-dir"].toString());
         config["camera-cal-dir"] = calDir.absolutePath();
     }
+
+    // Resolve the save directory to an absolute path
+    QFileInfo saveDir(config["save-dir"].toString() + QDir::separator());
+    QDir calDir(saveDir.absoluteDir().absolutePath());
+    config["save-dir"] = calDir.absolutePath() + QDir::separator();
 
     // Clean up the configuration by removing child configurations
     for(const QString & key: config.keys()) {

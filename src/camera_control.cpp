@@ -50,6 +50,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     // Unpack application settings
     bool enable_gui = (config["no-gui"] == "0");
     bool save_fits =  (config["no-save"] == "0");
+    QString save_dir        = config["save-dir"].toString();
 
     // Unpack the camera configuration settings
     string camera_id        = config["camera-id"].toString().toStdString();
@@ -257,6 +258,8 @@ int takeExposures(const QMap<QString, QVariant> & config) {
                 QString filename = QDateTime::currentDateTimeUtc().toString(Qt::ISODate) +
                     "_" + catalog_name + "_" + object_id + ".fits";
 
+                QString full_path = save_dir + filename;
+
                 cvfits.image = display_image;
                 cvfits.detector_name = camera_id;
                 cvfits.filter_name = filter_name.toStdString();
@@ -275,7 +278,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
                 cvfits.altitude = altitude;
                 cvfits.temperature = temperature;
 
-                cvfits.saveToFITS(filename.toStdString());
+                cvfits.saveToFITS(full_path.toStdString());
             }
 
             // Display the image when instructed.
