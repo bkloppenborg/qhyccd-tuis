@@ -410,17 +410,17 @@ int runCooler(const QMap<QString, QVariant> & config) {
     double temperature = config["camera-temperature"].toDouble();
     string camera_id   = config["camera-id"].toString().toStdString();
 
+    // Initalize the camera
+    int status = QHYCCD_SUCCESS;
+    status = InitQHYCCDResource();
+    qhyccd_handle * handle = OpenQHYCCD((char*) camera_id.c_str());
+
     if(cool_down) {
         qDebug() << "Starting camera cooler";
     } else {
         qDebug() << "Disabling camera cooler";
         temperature = 40.0;
     }
-
-    // Initalize the camera
-    int status = QHYCCD_SUCCESS;
-    status = InitQHYCCDResource();
-    qhyccd_handle * handle = OpenQHYCCD((char*) camera_id.c_str());
 
     status  = InitQHYCCD(handle);
     status |= IsQHYCCDControlAvailable(handle, CONTROL_COOLER);
@@ -431,6 +431,7 @@ int runCooler(const QMap<QString, QVariant> & config) {
         return -1;
     }
 
+    qDebug() << "Setting temperature to" << temperature;
     setTemperature(handle, temperature);
     //monitorTemperature(handle);
 
