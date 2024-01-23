@@ -193,7 +193,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     parser.addOption({"usb-transferbit", "Bits for image transfer. Options are 8 or 16", "usb-transferbit"});
     parser.addOption({{"camera-bin-mode", "cb"}, "Binning mode. Options: 1x1 - 9x9 further restricted by camera.", "camera-bin-mode"});
     parser.addOption({{"camera-temperature", "ct"}, "Set point for active cooling (Celsius)", "camera-temperature"});
-    parser.addOption({{"camera-cool-down", "cool-down", "cd"}, "Instruct the camera to begin cooling to the temperature in `camera-temperature`."});
+    parser.addOption({{"camera-cool-down", "cool-down"}, "Instruct the camera to begin cooling to the temperature in `camera-temperature`."});
     parser.addOption({{"camera-warm-up", "warm-up", "cw"}, "Instruct the camera to begin warming up."});
     parser.addOption({{"camera-cal-dir", "cd"}, "Location for camera calibration images", "camera-cal-dir"});
 
