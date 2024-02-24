@@ -67,6 +67,24 @@ void updateDefaultsFromSubConfig(QMap<QString, QVariant> & config, const QString
     }
 }
 
+void updateDefaults(QMap<QString, QVariant> & config, QCommandLineParser & parser, QString configName) {
+
+    // First see if the configuration file has a corresponding block.
+    // This block always exists as it is specified in parse_cli's config definition.
+    QString subConfigName = config[configName].toString();
+    if(!subConfigName.isEmpty()) {
+        qDebug() << "Loading" << subConfigName;
+        updateDefaultsFromSubConfig(config, subConfigName);
+    }
+
+    // Next check the command line interface
+    QString parserBlock = parser.value(configName);
+    if(!parserBlock.isEmpty()) {
+        qDebug() << "Loading" << parserBlock;
+        updateDefaultsFromSubConfig(config, parserBlock);
+    }
+}
+
 void printConfig(const QMap<QString, QVariant> & config) {
 
     for(const QString & key: config.keys()) {
@@ -149,11 +167,16 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["no-save"] = "0";
     config["save-dir"] = ".";
 
+    // Site configurations, often specified in a site block.
+    config["latitude"] = "0"; /// < Telescope latitude in degrees
+    config["longitude"] = "0"; /// < Telescope longitude in degrees
+    config["altitude"] = "0"; /// < Telescope altitude in degrees
+
     // Configuration options typically specified in a camera block
     config["camera-id"] =  "None";
     config["filter-names"] =  "None";   // an ordered list of filter names corresponding to slot numbers
     config["usb-transferbit"] =  "16";
-    config["usb-traffic"] =  "10";
+    config["usb-traffic"] =  "0";
     config["camera-bin-mode"] = "1x1";
     config["camera-temperature"] = "40"; // Values >= 40 imply active cooling should be disabled.
     config["camera-cool-down"] = "0";
@@ -165,7 +188,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["exp-durations"] = "1.0";
     config["exp-filters"] = "";
     config["exp-gains"] = "1.0";    // typically doesn't change between exposures, automatically replicated if needed.
-    config["exp-offsets"] =  "100";  // typically doesn't change between exposures, automatically replicated if needed.
+    config["exp-offsets"] =  "30";  // typically doesn't change between exposures, automatically replicated if needed.
 
     // Configuration typically specified on the CLI
     config["catalog"] =  "None";
@@ -178,15 +201,21 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
 
     // Broad configuration options.
     parser.addOption({{"config-file", "f"},     "Path to configuration file", "config-file"});
-    parser.addOption({{"camera-config", "cc"},  "Camera configuration name [optional]", "camera-config"});
-    parser.addOption({{"exp-config", "ec"},     "Exposure configuration name [optional]", "exp-config"});
+    parser.addOption({{"site-config", "sc"},  "Site configuration block name [optional]", "site-config"});
+    parser.addOption({{"camera-config", "cc"},  "Camera configuration block name [optional]", "camera-config"});
+    parser.addOption({{"exp-config", "ec"},     "Exposure configuration block name [optional]", "exp-config"});
     parser.addOption({"no-gui", "Disable all GUI elements"});   // boolean
     parser.addOption({{"no-save", "preview"}, "Disable saving FITS files"});   // boolean
     parser.addOption({{"save-dir", "sd"},       "Directory in which files will be saved", "save-dir"});
 
+    // Site options
+    parser.addOption({{"latitude", "lat"}, "Object identifier", "latitude"});
+    parser.addOption({{"longitude", "lon"}, "Object identifier", "longitude"});
+    parser.addOption({{"altitude", "alt"}, "Object identifier", "altitude"});
+
     // Camera options
     parser.addOption({"catalog", "Catalog name", "catalog"});
-    parser.addOption({{"object-id", "object"}, "Object identifier", "object"});
+    parser.addOption({{"object-id", "object"}, "Object identifier", "object-id"});
     parser.addOption({"camera-id", "QHY Camera Identifier", "camera-id"});
     parser.addOption({"filter-names", "List of filters in the camera", ""});
     parser.addOption({"usb-traffic", "QHY USB Traffic Setting", "usb-traffic"});
@@ -225,21 +254,10 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
         config["config-file"] = QVariant(configFile);
     }
 
-    // If a specific `camera-config` was specified, replace the values in the
-    // default configuration with the values in the sub-configuration
-    QString cameraConfig = parser.value("camera-config");
-    if(!cameraConfig.isEmpty()) {
-        qDebug() << "Loading camera configuration named " << cameraConfig;
-        updateDefaultsFromSubConfig(config, cameraConfig);
-    }
-
-    // If a specific `camera-config` was specified, replace the values in the
-    // default configuration with the values in the sub-configuration
-    QString expConfig = parser.value("exp-config");
-    if(!expConfig.isEmpty()) {
-        qDebug() << "Loading exposure configuration named " << expConfig;
-        updateDefaultsFromSubConfig(config, expConfig);
-    }
+    // Load pre-specified blocks for site, camera, and exposure configurations.
+    updateDefaults(config, parser, "site-config");
+    updateDefaults(config, parser, "camera-config");
+    updateDefaults(config, parser, "exp-config");
 
     // Override config values with anything specified on the command line.
     qDebug() << "Updating settings from command line parameters.";

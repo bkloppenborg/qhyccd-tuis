@@ -43,8 +43,10 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     uint32_t roiStartY = 0;
     uint32_t roiSizeX = 1;
     uint32_t roiSizeY = 1;
-    unsigned int bpp;
-    unsigned int channels;
+    uint32_t retSizeX = 1;
+    uint32_t retSizeY = 1;
+    uint32_t bpp;
+    uint32_t channels;
     BayerOrder bayer_order = BAYER_ORDER_NONE;
 
     // Unpack application settings
@@ -58,6 +60,10 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     int usb_traffic         = config["usb-traffic"].toInt();
     QStringList filter_names= config["filter-names"].toStringList();
     QString cal_dir         = config["camera-cal-dir"].toString();
+    QString requestedBinMode = config["camera-bin-mode"].toString();
+    QString setBinMode      = "0x0";
+    int binX = 1;
+    int binY = 1;
 
     // Unpack exposure configuration settings.
     QStringList quantities  = config["exp-quantities"].toStringList();
@@ -74,6 +80,10 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     int status = QHYCCD_SUCCESS;
     status = InitQHYCCDResource();
     qhyccd_handle * handle = OpenQHYCCD((char*) camera_id.c_str());
+
+    // Set to single frame mode.
+    status = SetQHYCCDStreamMode(handle, 0);
+
     status = InitQHYCCD(handle);
 
     // Verify the camera supports the modes we will be using.
@@ -125,6 +135,28 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     qDebug() << "Filter wheel exists?:" << filter_wheel_exists;
     qDebug() << "Filter wheel slots:" << filter_wheel_max_slots;
 
+    // Configure camera settings that are in common to all images
+    status  = SetQHYCCDParam(handle, CONTROL_TRANSFERBIT, usb_transferbit);
+    status |= SetQHYCCDParam(handle, CONTROL_USBTRAFFIC, usb_traffic);
+    status |= SetQHYCCDResolution(handle, roiStartX, roiStartY, roiSizeX, roiSizeY);
+    status |= setCameraBinMode(handle, requestedBinMode, setBinMode, binX, binY);
+    status |= SetQHYCCDBitsMode(handle, 16);
+    if(status != QHYCCD_SUCCESS) {
+        qCritical() << "Camera configuration failed";
+        exit(-1);
+    }
+
+    // Calculate the size of the resulting image
+    uint32_t imageSizeX = roiSizeX / binX;
+    uint32_t imageSizeY = roiSizeY / binY;
+
+    // Allocate a buffers to store the images
+    cv::Mat raw_image(imageSizeY, imageSizeX, CV_16U);
+    cv::Mat color_image(imageSizeY / 2, imageSizeX / 2, CV_16UC3);
+    cv::Mat display_image;
+
+    CVFITS cvfits;
+
     // Set up the camera and take images.
     for(int idx = 0; keep_running && idx < filters.length(); idx++) {
 
@@ -139,6 +171,23 @@ int takeExposures(const QMap<QString, QVariant> & config) {
             qWarning() << "Filter" << filter_name << "is not installed, skipping";
             continue;
         }
+
+        // Load the flat file for this filter
+        cv::Mat flat_image = cv::Mat::ones(imageSizeY, imageSizeX, CV_16U);
+        //QString flatFileName = cal_dir + QDir::separator() + "average_flat_" + filter_name + ".fits";
+        QString flatFileName = "None.fits";
+        QFileInfo flatFileInfo(flatFileName);
+        if(flatFileInfo.exists() && flatFileInfo.isFile()) {
+            // Load the image and scale it to the image duration
+            qDebug() << "Loading" << flatFileName;
+            CVFITS cvFlat(flatFileName.toStdString());
+            cv::multiply(cvFlat.image, duration_sec, flat_image);
+        }
+
+        // Configure exposure settings unique to this filter.
+        status |= SetQHYCCDParam(handle, CONTROL_GAIN, gain);
+        status |= SetQHYCCDParam(handle, CONTROL_OFFSET, offset);
+        status |= SetQHYCCDParam(handle, CONTROL_EXPOSURE, duration_usec);
 
         // Change the filter
         if(filter_wheel_exists && filter_wheel_max_slots > 0) {
@@ -158,44 +207,6 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
             qDebug() << "Filter change to" << filter_name << "successful";
         }
-
-        // Configure the camera
-        QString requestedBinMode = config["camera-bin-mode"].toString();
-        QString setBinMode = config["camera-bin-mode"].toString();
-        int binX = 1;
-        int binY = 1;
-        status  = SetQHYCCDStreamMode(handle, 0);
-        status |= SetQHYCCDParam(handle, CONTROL_TRANSFERBIT, usb_transferbit);
-        status |= SetQHYCCDParam(handle, CONTROL_USBTRAFFIC, usb_traffic);
-        status |= SetQHYCCDParam(handle, CONTROL_GAIN, gain);
-        status |= SetQHYCCDParam(handle, CONTROL_OFFSET, offset);
-        status |= SetQHYCCDParam(handle, CONTROL_EXPOSURE, duration_usec);
-        status |= SetQHYCCDResolution(handle, roiStartX, roiStartY, roiSizeX, roiSizeY);
-        status |= SetQHYCCDBinMode(handle, 1, 1);
-        status |= SetQHYCCDBitsMode(handle, 16);
-        status |= setCameraBinMode(handle, requestedBinMode, setBinMode, binX, binY);
-        if(status != QHYCCD_SUCCESS) {
-            qCritical() << "Camera configuration failed";
-            exit(-1);
-        }
-
-        // Load the flat file
-        cv::Mat flat_image = cv::Mat::ones(roiSizeY / binX, roiSizeX / binY, CV_16U);
-        QString flatFileName = cal_dir + QDir::separator() + "average_flat_" + filter_name + ".fits";
-        QFileInfo flatFileInfo(flatFileName);
-        if(flatFileInfo.exists() && flatFileInfo.isFile()) {
-            // Load the image and scale it to the image duration
-            qDebug() << "Loading" << flatFileName;
-            CVFITS cvFlat(flatFileName.toStdString());
-            cv::multiply(cvFlat.image, duration_sec, flat_image);
-        }
-
-        // Allocate a buffers to store the images
-        cv::Mat raw_image(roiSizeY / binX, roiSizeX / binY, CV_16U);
-        cv::Mat color_image(raw_image.rows / 2, raw_image.cols / 2, CV_16UC3);
-        cv::Mat display_image;
-
-        CVFITS cvfits;
 
         // take images
         for(int exposure_idx = 0; keep_running && exposure_idx < quantity; exposure_idx++) {
@@ -227,8 +238,12 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
             // Transfer the image. This is a blocking call.
             const auto t_b = std::chrono::system_clock::now();
-            status = GetQHYCCDSingleFrame(handle, &roiSizeX, &roiSizeY, &bpp, &channels, raw_image.ptr());
+            status = GetQHYCCDSingleFrame(handle, &retSizeX, &retSizeY, &bpp, &channels, raw_image.ptr());
             const auto t_c = std::chrono::system_clock::now();
+
+            if(roiSizeX / binX != retSizeX || roiSizeY / binY != retSizeY) {
+                qFatal("Predicted vs. actual image size mismatch!");
+            }
 
             // Get additional time-dependent information from the camera.
             if(can_get_temperature)
@@ -256,7 +271,9 @@ int takeExposures(const QMap<QString, QVariant> & config) {
             if(save_fits) {
                 // Save the image data
                 QString filename = QDateTime::currentDateTimeUtc().toString(Qt::ISODate) +
-                    "_" + catalog_name + "_" + object_id + ".fits";
+                    "_" + catalog_name + "_" + object_id + "_" + filter_name + ".fits";
+                // replace colons in the filename with hypens
+                std::replace(filename.begin(), filename.end(), ':', '-');
 
                 QString full_path = save_dir + filename;
 
@@ -284,7 +301,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
             // Display the image when instructed.
             if(enable_gui) {
 
-                display_image /= flat_image;
+                //display_image /= flat_image;
                 display_image = scaleImageLinear(display_image);
 
                 // Show the image.
@@ -361,7 +378,7 @@ int setCameraBinMode(qhyccd_handle * handle, const QString & requestedMode, QStr
     }
 
     // For all other binning modes, verify that the binning mode is supported.
-    // If it isn't supported, issue a warning and revert to 1x1 binning.
+    // If it isn't supported, issue a warning and call this function recursively to set things.
     bool modeSupported = (IsQHYCCDControlAvailable(handle, control_id) == QHYCCD_SUCCESS);
     if(!modeSupported) {
         qWarning() << "Warning: Binning" << requestedMode << "is not supported, reverting to 1x1 binning";

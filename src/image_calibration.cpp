@@ -19,7 +19,7 @@ cv::Mat scaleImageLinear_CV_16UC1(const cv::Mat & rawImage) {
     cv::meanStdDev(scaledImage, mean_s, stddev_s);
 
     double minPixValue = mean_s[0] - stddev_s[0];
-    double maxPixValue = max;
+    double maxPixValue = mean_s[0] + 3*stddev_s[0];
 
     double scale = 255.0 / (double)(maxPixValue - minPixValue);
 

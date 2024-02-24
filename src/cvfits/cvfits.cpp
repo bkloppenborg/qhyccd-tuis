@@ -7,7 +7,7 @@
 // system includes
 #include <fitsio2.h>
 #include <math.h>
-
+#include <algorithm>
 #include <opencv2/core.hpp>
 
 CVFITS::CVFITS(std::string filename) {
@@ -60,8 +60,17 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
   long depth = this->image.channels();
 
   int bitpix = USHORT_IMG;
-  long naxis = 3;
-  long naxes[3] = { (long int) width, (long int) height, (long int) depth };
+  long naxis = 2;
+
+  if(depth == 3)
+    naxis = 3;
+
+  std::vector<long> naxes;
+  naxes.push_back(width);
+  naxes.push_back(height);
+
+  if(naxis == 3)
+    naxes.push_back(depth);
 
   int nelements = width * height;
 
@@ -75,7 +84,7 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
 
     // Write out each channel independently.
     // NOTE: OpenCV stores data in BGR order.
-    fits_create_img(fptr, bitpix, naxis, naxes, &status);
+    fits_create_img(fptr, bitpix, naxis, naxes.data(), &status);
     for(int i = 0; i < depth; i++) {
       long fpixel[3] = {1, 1, 1+i};
       fits_write_pix(fptr, TUSHORT, fpixel, nelements, channels[i].ptr(), &status);
@@ -83,7 +92,7 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
 
   } else {
     // single channel image, write it out.
-    fits_create_img(fptr, bitpix, naxis, naxes, &status);
+    fits_create_img(fptr, bitpix, naxis, naxes.data(), &status);
     fits_write_img(fptr, TUSHORT, 1, nelements, this->image.data, &status);
   }
 
@@ -163,6 +172,8 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
                  "Name of catalog to which the object belongs",
                  &status);
 
+  // Replace any underscores in the name with spaces.
+  std::replace(object_name.begin(), object_name.end(), '_', ' ');
   fits_write_key(fptr, TSTRING, "OBJECT",
                  (void *) object_name.c_str(),
                  "Name of object from the catalog.",
@@ -170,18 +181,19 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
 
   //
   // Latitude, Longitude, and Altitude
+  // Adopt the convention from the EOSSA File Specification v. 3.1.1
   //
   double t_latitude = latitude * 180.0 / M_PI;
-  fits_write_key(fptr, TDOUBLE, "LATITUDE",
+  fits_write_key(fptr, TDOUBLE, "TELLONG",
                  (void *) &t_latitude,
                  "Latitude of observatory (degrees).",
                  &status);
   double t_longitude = longitude * 180.0 / M_PI;
-  fits_write_key(fptr, TDOUBLE, "LONGITUDE",
+  fits_write_key(fptr, TDOUBLE, "TELLAT",
                  (void *) &t_longitude,
                  "Longitude of observatory (degrees)",
                  &status);
-  fits_write_key(fptr, TDOUBLE, "ALTITUDE",
+  fits_write_key(fptr, TDOUBLE, "TELALT",
                  (void *) &altitude,
                  "Altitude of observatory (meters)",
                  &status);
