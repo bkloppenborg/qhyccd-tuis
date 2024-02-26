@@ -57,6 +57,8 @@ public:
   double azm       = 0; ///< AZM coordinate of the image center (radians).
   double alt       = 0; ///< ALT coordinate of the image center (radians).
 
+  double gain = 1.0;  ///< Camera gain setting.
+
 public:
   /// Default constructor.
   CVFITS() {}

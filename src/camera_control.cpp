@@ -294,6 +294,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
                 cvfits.longitude = longitude;
                 cvfits.altitude = altitude;
                 cvfits.temperature = temperature;
+                cvfits.gain = gain;
 
                 cvfits.saveToFITS(full_path.toStdString());
             }

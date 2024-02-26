@@ -153,14 +153,24 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
                  &status);
 
   std::string t = std::to_string(exposure_duration_sec);
-  fits_write_key(fptr, TSTRING, "EXPTIME",
-                 (void*) t.c_str(),
+  fits_write_key(fptr, TDOUBLE, "EXPTIME",
+                 (void*) &exposure_duration_sec,
                  "Duration of exposure in seconds",
                  &status);
 
   fits_write_key(fptr, TSTRING, "FILTER",
                  (void*) filter_name.c_str(),
                  "Name of photometric filter used",
+                 &status);
+
+  fits_write_key(fptr, TDOUBLE, "GAIN",
+                 (void*) &gain,
+                 "Camera Gain Setting",
+                 &status);
+
+  fits_write_key(fptr, TDOUBLE, "EGAIN",
+                 (void*) &gain,
+                 "Camera Gain Setting",
                  &status);
 
 
