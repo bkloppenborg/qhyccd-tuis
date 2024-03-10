@@ -76,6 +76,9 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     QString catalog_name    = config["catalog"].toString();
     QString object_id       = config["object-id"].toString();
 
+    // Unpack optional settings
+    bool draw_circle = config["draw-circle"].toBool();
+
     // Initalize the camera
     int status = QHYCCD_SUCCESS;
     status = InitQHYCCDResource();
@@ -156,6 +159,9 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     cv::Mat display_image;
 
     CVFITS cvfits;
+
+    cv::Point2d image_center(imageSizeX / 2, imageSizeY / 2);
+    cv::Scalar circle_color(255, 0, 0);
 
     // Set up the camera and take images.
     for(int idx = 0; keep_running && idx < filters.length(); idx++) {
@@ -304,6 +310,12 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
                 //display_image /= flat_image;
                 display_image = scaleImageLinear(display_image);
+
+                // Draw a circle for the image center.
+                if(draw_circle) {
+                    cv::circle(display_image, image_center, 50 / binX, circle_color, 10 / binX);
+                    cv::circle(display_image, image_center, 100 / binX, circle_color, 10 / binX);
+                }
 
                 // Show the image.
                 cv::imshow("display_window", display_image);

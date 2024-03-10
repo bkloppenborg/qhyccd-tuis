@@ -233,6 +233,9 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     parser.addOption({{"exp-gains", "eg"},      "The gain to use per each filter", "exp-gains"});
     parser.addOption({{"exp-offsets", "eo"},    "Image offset per each filter", "exp-offsets"});
 
+    // Display options
+    parser.addOption({"draw-circle", "Draw a circle at the center of the image"}); // boolean
+
     // Other parameters
     parser.addOption(QCommandLineOption("dump-config", "Dump default configuration to file", "file"));
 
@@ -277,6 +280,12 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
         config["no-save"] = "1";
     else
         config["no-save"] = "0";
+
+    if(parser.isSet("draw-circle"))
+        config["draw-circle"] = "1";
+    else
+        config["draw-circle"] = "0";
+
 
         // Check that the camera is specified
     if(config["camera-id"] == "None") {
