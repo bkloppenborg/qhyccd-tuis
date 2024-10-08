@@ -134,9 +134,12 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     char fw_cmd_position[8] = {0};
     char fw_act_position[8] = {0};
     bool filter_wheel_exists = (IsQHYCCDCFWPlugged(handle) == QHYCCD_SUCCESS);
-    int filter_wheel_max_slots = GetQHYCCDParam(handle, CONTROL_CFWSLOTSNUM);
     qDebug() << "Filter wheel exists?:" << filter_wheel_exists;
-    qDebug() << "Filter wheel slots:" << filter_wheel_max_slots;
+    int filter_wheel_max_slots = 0;
+    if(filter_wheel_exists) {
+        filter_wheel_max_slots = GetQHYCCDParam(handle, CONTROL_CFWSLOTSNUM);
+        qDebug() << "Filter wheel slots:" << filter_wheel_max_slots;
+    }
 
     // Configure camera settings that are in common to all images
     status  = SetQHYCCDParam(handle, CONTROL_TRANSFERBIT, usb_transferbit);
@@ -161,7 +164,8 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     CVFITS cvfits;
 
     cv::Point2d image_center(imageSizeX / 2, imageSizeY / 2);
-    cv::Scalar circle_color(255, 0, 0);
+    cv::Scalar white_color(255, 255, 255);
+    cv::Scalar black_color(0,0,0);
 
     // Set up the camera and take images.
     for(int idx = 0; keep_running && idx < filters.length(); idx++) {
@@ -313,8 +317,14 @@ int takeExposures(const QMap<QString, QVariant> & config) {
 
                 // Draw a circle for the image center.
                 if(draw_circle) {
-                    cv::circle(display_image, image_center, 50 / binX, circle_color, 10 / binX);
-                    cv::circle(display_image, image_center, 100 / binX, circle_color, 10 / binX);
+                    int inner_ring = 50 / binX;
+                    int ring_width = 10 / binX;
+                    int outer_ring = 100 / binX;
+
+                    cv::circle(display_image, image_center, inner_ring, white_color, ring_width);
+                    cv::circle(display_image, image_center, inner_ring + ring_width, black_color, ring_width);
+                    cv::circle(display_image, image_center, outer_ring, white_color, ring_width);
+                    cv::circle(display_image, image_center, outer_ring + ring_width, black_color, ring_width);
                 }
 
                 // Show the image.
