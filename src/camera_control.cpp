@@ -61,7 +61,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     QStringList filter_names= config["filter-names"].toStringList();
     QString cal_dir         = config["camera-cal-dir"].toString();
     QString requestedBinMode = config["camera-bin-mode"].toString();
-    QString setBinMode      = "0x0";
+    QString setBinMode      = "1x1";
     int binX = 1;
     int binY = 1;
 
@@ -72,9 +72,10 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     QStringList gains       = config["exp-gains"].toStringList();
     QStringList offsets     = config["exp-offsets"].toStringList();
 
-    // Unpack object information.
+    // Unpack object information. Replace spaces with underscores.
     QString catalog_name    = config["catalog"].toString();
     QString object_id       = config["object-id"].toString();
+    std::replace(object_id.begin(), object_id.end(), ' ', '_');
 
     // Unpack optional settings
     bool draw_circle = config["draw-circle"].toBool();
@@ -88,6 +89,10 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     status = SetQHYCCDStreamMode(handle, 0);
 
     status = InitQHYCCD(handle);
+    if(status != QHYCCD_SUCCESS) {
+        qCritical() << "Camera cannot be initialized. Is it plugged in?";
+        exit(-1);
+    }
 
     // Verify the camera supports the modes we will be using.
     status = IsQHYCCDControlAvailable(handle, CAM_SINGLEFRAMEMODE);
