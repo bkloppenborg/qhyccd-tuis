@@ -58,6 +58,7 @@ public:
   double alt       = 0; ///< ALT coordinate of the image center (radians).
 
   double gain = 1.0;  ///< Camera gain setting.
+  int read_mode = 0;  ///< Camera read mode index.
 
 public:
   /// Default constructor.
