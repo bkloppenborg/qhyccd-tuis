@@ -178,6 +178,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     config["usb-transferbit"] =  "16";
     config["usb-traffic"] =  "0";
     config["camera-bin-mode"] = "1x1";
+    config["camera-read-mode"] = "0";
     config["camera-temperature"] = "40"; // Values >= 40 imply active cooling should be disabled.
     config["camera-cool-down"] = "0";
     config["camera-warm-up"] = "0";
@@ -221,6 +222,7 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
     parser.addOption({"usb-traffic", "QHY USB Traffic Setting", "usb-traffic"});
     parser.addOption({"usb-transferbit", "Bits for image transfer. Options are 8 or 16", "usb-transferbit"});
     parser.addOption({{"camera-bin-mode", "cb"}, "Binning mode. Options: 1x1 - 9x9 further restricted by camera.", "camera-bin-mode"});
+    parser.addOption({{"camera-read-mode", "cr"}, "Camera read mode index", "camera-read-mode"});
     parser.addOption({{"camera-temperature", "ct"}, "Set point for active cooling (Celsius)", "camera-temperature"});
     parser.addOption({{"camera-cool-down", "cool-down"}, "Instruct the camera to begin cooling to the temperature in `camera-temperature`."});
     parser.addOption({{"camera-warm-up", "warm-up", "cw"}, "Instruct the camera to begin warming up."});
@@ -345,6 +347,9 @@ QMap<QString, QVariant> parse_cli(const QCoreApplication & app) {
         qCritical() << "Binning mode must be one of " << allowed_bin_modes;
         exit(-1);
     }
+
+    // Validate camera read mode
+    checkIntegerType(config["camera-read-mode"].toString(), "camera-read-mode must be an integer value.");
 
     // Handle cooling / temperature settings.
     checkNumericType(config["camera-temperature"].toString(), "Camera temperature must be a numeric value.");

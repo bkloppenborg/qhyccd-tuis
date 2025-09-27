@@ -244,8 +244,6 @@ int main(int argc, char *argv[])
         check_control(handle, CONTROL_AUTOEXPOSURE, "CONTROL_AUTOEXPOSURE");
 
         print_control_header();
-        check_control(handle, CONTROL_AUTOEXPmessureValue, "CONTROL_AUTOEXPMESSUREVALUE");
-        check_control(handle, CONTROL_AUTOEXPmessureMethod, "CONTROL_AUTOEXPMESSUREMETHOD");
         check_control(handle, CONTROL_ImageStabilization, "CONTROL_IMAGESTABILIZATION");
         check_control(handle, CONTROL_GAINdB, "CONTROL_GAINDB");
         check_control(handle, CONTROL_DPC, "CONTROL_DPC");

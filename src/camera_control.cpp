@@ -64,6 +64,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     QString setBinMode      = "1x1";
     int binX = 1;
     int binY = 1;
+    int camera_read_mode    = config["camera-read-mode"].toInt();
 
     // Unpack exposure configuration settings.
     QStringList quantities  = config["exp-quantities"].toStringList();
@@ -152,6 +153,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
     status |= SetQHYCCDResolution(handle, roiStartX, roiStartY, roiSizeX, roiSizeY);
     status |= setCameraBinMode(handle, requestedBinMode, setBinMode, binX, binY);
     status |= SetQHYCCDBitsMode(handle, 16);
+    status |= SetQHYCCDReadMode(handle, camera_read_mode);
     if(status != QHYCCD_SUCCESS) {
         qCritical() << "Camera configuration failed";
         exit(-1);
@@ -310,6 +312,7 @@ int takeExposures(const QMap<QString, QVariant> & config) {
                 cvfits.altitude = altitude;
                 cvfits.temperature = temperature;
                 cvfits.gain = gain;
+                cvfits.read_mode = camera_read_mode;
 
                 cvfits.saveToFITS(full_path.toStdString());
             }

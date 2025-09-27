@@ -173,6 +173,10 @@ void CVFITS::saveToFITS(std::string filename, bool overwrite) {
                  "Camera Gain Setting",
                  &status);
 
+  fits_write_key(fptr, TINT, "RDMODE",
+                 (void*) &read_mode,
+                 "Camera Read Mode Index",
+                 &status);
 
   //
   // Information about the object
